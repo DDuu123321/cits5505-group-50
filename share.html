@@ -1,0 +1,618 @@
+<!-- Author: -->
+<!-- Wei Dai (24076678) -->
+<!-- Bowen Dai (23951946) -->
+<!-- David Du (24074639) -->
+<!-- Srinath Rajan (24318358) -->
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Share Study Data - StudyTime Tracker</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Font Awesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+      <div class="container">
+        <a class="navbar-brand" href="index.html">
+          <i class="fas fa-clock me-2"></i>StudyTime Tracker
+        </a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="index.html">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="upload.html">Record Time</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="visualize.html">Analytics</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link active" href="share.html">Share</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Page Header -->
+    <header class="bg-light py-4">
+      <div class="container">
+        <h1>Share Your Study Data</h1>
+        <p class="lead">
+          Create and manage shared reports of your study analytics.
+        </p>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container py-5">
+      <div class="row">
+        <div class="col-lg-8">
+          <!-- Shared Reports Tab System -->
+          <ul class="nav nav-tabs" id="shareTab" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button
+                class="nav-link active"
+                id="myShares-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#myShares"
+                type="button"
+              >
+                <i class="fas fa-share-alt me-2"></i>My Shared Reports
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button
+                class="nav-link"
+                id="sharedWithMe-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#sharedWithMe"
+                type="button"
+              >
+                <i class="fas fa-user-friends me-2"></i>Shared With Me
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button
+                class="nav-link"
+                id="studyGroups-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#studyGroups"
+                type="button"
+              >
+                <i class="fas fa-users me-2"></i>Study Groups
+              </button>
+            </li>
+          </ul>
+
+          <div
+            class="tab-content p-4 border border-top-0 rounded-bottom"
+            id="shareTabContent"
+          >
+            <!-- My Shared Reports Tab -->
+            <div
+              class="tab-pane fade show active"
+              id="myShares"
+              role="tabpanel"
+            >
+              <div
+                class="d-flex justify-content-between align-items-center mb-4"
+              >
+                <h4 class="mb-0">Reports You've Shared</h4>
+                <button
+                  class="btn btn-primary"
+                  data-bs-toggle="modal"
+                  data-bs-target="#createReportModal"
+                >
+                  <i class="fas fa-plus me-2"></i>Create New Report
+                </button>
+              </div>
+
+              <div class="list-group">
+                <div class="list-group-item list-group-item-action">
+                  <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">Weekly Math Progress</h5>
+                    <small>Expires in 5 days</small>
+                  </div>
+                  <div class="d-flex w-100 justify-content-between">
+                    <p class="mb-1">
+                      Mathematics study progress shared with Prof. Johnson
+                    </p>
+                    <div>
+                      <span class="badge bg-primary me-1">View: 3</span>
+                      <span class="badge bg-secondary">Comments: 1</span>
+                    </div>
+                  </div>
+                  <div
+                    class="d-flex justify-content-between align-items-center mt-2"
+                  >
+                    <small class="text-muted">Created on Apr 18, 2025</small>
+                    <div>
+                      <button class="btn btn-sm btn-outline-primary me-1">
+                        <i class="fas fa-edit me-1"></i>Edit
+                      </button>
+                      <button class="btn btn-sm btn-outline-danger">
+                        <i class="fas fa-trash-alt me-1"></i>Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="list-group-item list-group-item-action">
+                  <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">Programming Study Group Report</h5>
+                    <small>No expiration</small>
+                  </div>
+                  <div class="d-flex w-100 justify-content-between">
+                    <p class="mb-1">
+                      Shared with CS Team Study Group (5 members)
+                    </p>
+                    <div>
+                      <span class="badge bg-primary me-1">View: 12</span>
+                      <span class="badge bg-secondary">Comments: 8</span>
+                    </div>
+                  </div>
+                  <div
+                    class="d-flex justify-content-between align-items-center mt-2"
+                  >
+                    <small class="text-muted">Created on Apr 10, 2025</small>
+                    <div>
+                      <button class="btn btn-sm btn-outline-primary me-1">
+                        <i class="fas fa-edit me-1"></i>Edit
+                      </button>
+                      <button class="btn btn-sm btn-outline-danger">
+                        <i class="fas fa-trash-alt me-1"></i>Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Shared With Me Tab -->
+            <div class="tab-pane fade" id="sharedWithMe" role="tabpanel">
+              <h4 class="mb-4">Reports Shared With You</h4>
+
+              <div class="list-group">
+                <div class="list-group-item list-group-item-action">
+                  <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">Physics Study Progress</h5>
+                    <small>From: Alex Chen</small>
+                  </div>
+                  <p class="mb-1">
+                    Group study session analytics for upcoming exam
+                  </p>
+                  <div
+                    class="d-flex justify-content-between align-items-center mt-2"
+                  >
+                    <small class="text-muted">Shared on Apr 20, 2025</small>
+                    <button class="btn btn-sm btn-outline-primary">
+                      <i class="fas fa-eye me-1"></i>View Report
+                    </button>
+                  </div>
+                </div>
+
+                <div class="list-group-item list-group-item-action">
+                  <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">Literature Study Habits</h5>
+                    <small>From: Sophia Park</small>
+                  </div>
+                  <p class="mb-1">
+                    Comparative study techniques for literature analysis
+                  </p>
+                  <div
+                    class="d-flex justify-content-between align-items-center mt-2"
+                  >
+                    <small class="text-muted">Shared on Apr 15, 2025</small>
+                    <button class="btn btn-sm btn-outline-primary">
+                      <i class="fas fa-eye me-1"></i>View Report
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Study Groups Tab -->
+            <div class="tab-pane fade" id="studyGroups" role="tabpanel">
+              <div
+                class="d-flex justify-content-between align-items-center mb-4"
+              >
+                <h4 class="mb-0">Your Study Groups</h4>
+                <button class="btn btn-primary">
+                  <i class="fas fa-plus me-2"></i>Create Group
+                </button>
+              </div>
+
+              <div class="card mb-4">
+                <div class="card-header bg-light">
+                  <div
+                    class="d-flex justify-content-between align-items-center"
+                  >
+                    <h5 class="mb-0">CS Algorithm Study Group</h5>
+                    <span class="badge bg-success">5 Members</span>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <p>
+                    Collaborative study group for Computer Science algorithms
+                    and data structures.
+                  </p>
+                  <div class="d-flex mb-3">
+                    <div class="avatar-group">
+                      <span class="avatar">JD</span>
+                      <span class="avatar">AK</span>
+                      <span class="avatar">BP</span>
+                      <span class="avatar">+2</span>
+                    </div>
+                  </div>
+                  <div class="d-flex justify-content-between">
+                    <button class="btn btn-outline-primary">
+                      <i class="fas fa-chart-line me-1"></i>Group Analytics
+                    </button>
+                    <button class="btn btn-outline-secondary">
+                      <i class="fas fa-cog me-1"></i>Manage
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header bg-light">
+                  <div
+                    class="d-flex justify-content-between align-items-center"
+                  >
+                    <h5 class="mb-0">Physics Exam Prep</h5>
+                    <span class="badge bg-success">3 Members</span>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <p>Group focused on preparing for upcoming physics exams.</p>
+                  <div class="d-flex mb-3">
+                    <div class="avatar-group">
+                      <span class="avatar">AC</span>
+                      <span class="avatar">MR</span>
+                      <span class="avatar">You</span>
+                    </div>
+                  </div>
+                  <div class="d-flex justify-content-between">
+                    <button class="btn btn-outline-primary">
+                      <i class="fas fa-chart-line me-1"></i>Group Analytics
+                    </button>
+                    <button class="btn btn-outline-secondary">
+                      <i class="fas fa-cog me-1"></i>Manage
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4">
+          <!-- Quick Access Panel -->
+          <div class="card mb-4">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Quick Access</h5>
+            </div>
+            <div class="card-body">
+              <div class="d-grid gap-2">
+                <button
+                  class="btn btn-outline-primary"
+                  data-bs-toggle="modal"
+                  data-bs-target="#createReportModal"
+                >
+                  <i class="fas fa-plus-circle me-2"></i>Create New Report
+                </button>
+                <button class="btn btn-outline-secondary">
+                  <i class="fas fa-user-plus me-2"></i>Invite Study Partner
+                </button>
+                <button class="btn btn-outline-secondary">
+                  <i class="fas fa-users me-2"></i>Join Study Group
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Access Code Entry -->
+          <div class="card mb-4">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Access Shared Report</h5>
+            </div>
+            <div class="card-body">
+              <p>Enter a report access code shared with you:</p>
+              <div class="input-group mb-3">
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Enter access code"
+                />
+                <button class="btn btn-primary" type="button">
+                  <i class="fas fa-arrow-right"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tips and Privacy -->
+          <div class="card">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Sharing Tips & Privacy</h5>
+            </div>
+            <div class="card-body">
+              <ul class="list-group list-group-flush">
+                <li class="list-group-item">
+                  <i class="fas fa-lock text-primary me-2"></i>
+                  Your data is only shared with specific individuals you select
+                </li>
+                <li class="list-group-item">
+                  <i class="fas fa-calendar-alt text-primary me-2"></i>
+                  Set expiration dates for temporary sharing
+                </li>
+                <li class="list-group-item">
+                  <i class="fas fa-eye-slash text-primary me-2"></i>
+                  You can revoke access at any time
+                </li>
+                <li class="list-group-item">
+                  <i class="fas fa-sliders-h text-primary me-2"></i>
+                  Control which data points and subjects are shared
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Create Report Modal -->
+    <div
+      class="modal fade"
+      id="createReportModal"
+      tabindex="-1"
+      aria-labelledby="createReportModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="createReportModalLabel">
+              Create Shared Report
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form>
+              <div class="mb-3">
+                <label for="reportTitle" class="form-label">Report Title</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="reportTitle"
+                  placeholder="Enter a descriptive title"
+                />
+              </div>
+              <div class="mb-3">
+                <label for="reportDescription" class="form-label"
+                  >Description</label
+                >
+                <textarea
+                  class="form-control"
+                  id="reportDescription"
+                  rows="2"
+                  placeholder="What is this report about?"
+                ></textarea>
+              </div>
+
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label for="startDate" class="form-label"
+                    >Date Range Start</label
+                  >
+                  <input type="date" class="form-control" id="startDate" />
+                </div>
+                <div class="col-md-6">
+                  <label for="endDate" class="form-label">Date Range End</label>
+                  <input type="date" class="form-control" id="endDate" />
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Subjects to Include</label>
+                <div class="subject-list">
+                  <div class="form-check">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      value=""
+                      id="subjectMath"
+                      checked
+                    />
+                    <label class="form-check-label" for="subjectMath">
+                      Mathematics
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      value=""
+                      id="subjectCS"
+                      checked
+                    />
+                    <label class="form-check-label" for="subjectCS">
+                      Computer Science
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      value=""
+                      id="subjectPhysics"
+                    />
+                    <label class="form-check-label" for="subjectPhysics">
+                      Physics
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      value=""
+                      id="subjectLit"
+                    />
+                    <label class="form-check-label" for="subjectLit">
+                      Literature
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Share With</label>
+                <select class="form-select mb-2" id="shareType">
+                  <option selected>Select sharing option</option>
+                  <option value="1">Individual Users</option>
+                  <option value="2">Study Group</option>
+                  <option value="3">Access Code (Anyone with code)</option>
+                </select>
+
+                <div class="input-group">
+                  <input
+                    type="email"
+                    class="form-control"
+                    placeholder="Enter email address"
+                  />
+                  <button class="btn btn-outline-secondary" type="button">
+                    Add
+                  </button>
+                </div>
+
+                <div class="mt-2">
+                  <span class="badge bg-primary p-2 me-1"
+                    >john.doe@example.com <i class="fas fa-times ms-1"></i
+                  ></span>
+                  <span class="badge bg-primary p-2"
+                    >prof.smith@university.edu <i class="fas fa-times ms-1"></i
+                  ></span>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label for="expiryDate" class="form-label"
+                  >Expiration Date (Optional)</label
+                >
+                <input type="date" class="form-control" id="expiryDate" />
+                <div class="form-text">Leave blank for no expiration.</div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Permission Level</label>
+                <div class="form-check">
+                  <input
+                    class="form-check-input"
+                    type="radio"
+                    name="permissionLevel"
+                    id="viewOnly"
+                    checked
+                  />
+                  <label class="form-check-label" for="viewOnly">
+                    View Only
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input
+                    class="form-check-input"
+                    type="radio"
+                    name="permissionLevel"
+                    id="viewComment"
+                  />
+                  <label class="form-check-label" for="viewComment">
+                    View and Comment
+                  </label>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <button type="button" class="btn btn-primary">Create Report</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-6">
+            <h5><i class="fas fa-clock me-2"></i>StudyTime Tracker</h5>
+            <p>Track, analyze, and optimize your study habits.</p>
+          </div>
+          <div class="col-md-3">
+            <h5>Links</h5>
+            <ul class="list-unstyled">
+              <li><a href="index.html" class="text-white">Home</a></li>
+              <li><a href="upload.html" class="text-white">Record Time</a></li>
+              <li><a href="visualize.html" class="text-white">Analytics</a></li>
+              <li><a href="share.html" class="text-white">Share</a></li>
+            </ul>
+          </div>
+          <div class="col-md-3">
+            <h5>Contact</h5>
+            <ul class="list-unstyled">
+              <li>24076678@student.uwa.edu.au</li>
+              <li>23951946@student.uwa.edu.au</li>
+              <li>24074639@student.uwa.edu.au</li>
+              <li>24318358@student.uwa.edu.au</li>
+              <li>University of Western Australia</li>
+            </ul>
+          </div>
+        </div>
+        <hr />
+        <div class="text-center">
+          <p>&copy; 2025 StudyTime Tracker - CITS5505 Project</p>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="js/main.js"></script>
+  </body>
+</html>
