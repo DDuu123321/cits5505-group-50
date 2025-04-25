@@ -1,0 +1,444 @@
+<!-- Author: -->
+<!-- Wei Dai (24076678) -->
+<!-- Bowen Dai (23951946) -->
+<!-- David Du (24074639) -->
+<!-- Srinath Rajan (24318358) -->
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Study Analytics - StudyTime Tracker</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Font Awesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+      <div class="container">
+        <a class="navbar-brand" href="index.html">
+          <i class="fas fa-clock me-2"></i>StudyTime Tracker
+        </a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="index.html">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="upload.html">Record Time</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link active" href="visualize.html">Analytics</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="share.html">Share</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Page Header -->
+    <header class="bg-light py-4">
+      <div class="container">
+        <h1>Study Analytics</h1>
+        <p class="lead">
+          Gain insights from your study data to improve your learning habits.
+        </p>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container py-5">
+      <!-- Date Range Filter -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-md-4">
+              <h5>Filter Data</h5>
+            </div>
+            <div class="col-md-8">
+              <div class="row g-2">
+                <div class="col-md-5">
+                  <div class="input-group">
+                    <span class="input-group-text">From</span>
+                    <input type="date" class="form-control" id="dateFrom" />
+                  </div>
+                </div>
+                <div class="col-md-5">
+                  <div class="input-group">
+                    <span class="input-group-text">To</span>
+                    <input type="date" class="form-control" id="dateTo" />
+                  </div>
+                </div>
+                <div class="col-md-2">
+                  <button class="btn btn-primary w-100">Apply</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="row g-4 mb-4">
+        <div class="col-md-3">
+          <div class="card text-center h-100">
+            <div class="card-body">
+              <h3 class="card-title text-primary">45.5</h3>
+              <p class="card-text">Total Hours This Week</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card text-center h-100">
+            <div class="card-body">
+              <h3 class="card-title text-success">25%</h3>
+              <p class="card-text">Increase from Last Week</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card text-center h-100">
+            <div class="card-body">
+              <h3 class="card-title text-warning">3.8/5</h3>
+              <p class="card-text">Average Efficiency</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card text-center h-100">
+            <div class="card-body">
+              <h3 class="card-title text-info">83%</h3>
+              <p class="card-text">Goal Completion</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Charts -->
+      <div class="row g-4">
+        <!-- Weekly Hours Chart -->
+        <div class="col-lg-8">
+          <div class="card mb-4">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Weekly Study Hours</h5>
+            </div>
+            <div class="card-body">
+              <!-- Placeholder for weekly hours chart -->
+              <div
+                class="chart-placeholder"
+                style="
+                  height: 300px;
+                  background-color: #f8f9fa;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  border-radius: 4px;
+                "
+              >
+                <div class="text-center">
+                  <i class="fas fa-chart-line fa-4x text-secondary mb-3"></i>
+                  <p class="text-muted">
+                    Weekly study hours chart will appear here
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Subject Distribution -->
+        <div class="col-lg-4">
+          <div class="card mb-4">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Subject Distribution</h5>
+            </div>
+            <div class="card-body">
+              <!-- Placeholder for pie chart -->
+              <div
+                class="chart-placeholder"
+                style="
+                  height: 300px;
+                  background-color: #f8f9fa;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  border-radius: 4px;
+                "
+              >
+                <div class="text-center">
+                  <i class="fas fa-chart-pie fa-4x text-secondary mb-3"></i>
+                  <p class="text-muted">
+                    Subject distribution chart will appear here
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Productivity Heatmap -->
+        <div class="col-lg-8">
+          <div class="card mb-4">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Productivity Heatmap</h5>
+            </div>
+            <div class="card-body">
+              <p class="card-text text-muted mb-3">
+                Efficiency rating by time of day and day of week
+              </p>
+              <!-- Placeholder for heatmap -->
+              <div
+                class="chart-placeholder"
+                style="
+                  height: 250px;
+                  background-color: #f8f9fa;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  border-radius: 4px;
+                "
+              >
+                <div class="text-center">
+                  <i class="fas fa-th fa-4x text-secondary mb-3"></i>
+                  <p class="text-muted">
+                    Productivity heatmap will appear here
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Study Location Impact -->
+        <div class="col-lg-4">
+          <div class="card mb-4">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Location Efficiency</h5>
+            </div>
+            <div class="card-body">
+              <p class="card-text text-muted mb-3">
+                Average efficiency rating by study location
+              </p>
+              <!-- Placeholder for location chart -->
+              <div
+                class="chart-placeholder"
+                style="
+                  height: 250px;
+                  background-color: #f8f9fa;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  border-radius: 4px;
+                "
+              >
+                <div class="text-center">
+                  <i
+                    class="fas fa-map-marker-alt fa-4x text-secondary mb-3"
+                  ></i>
+                  <p class="text-muted">
+                    Location efficiency chart will appear here
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interruptions Analysis -->
+        <div class="col-lg-6">
+          <div class="card mb-4">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Interruption Analysis</h5>
+            </div>
+            <div class="card-body">
+              <p class="card-text text-muted mb-3">
+                Frequency and duration of study interruptions
+              </p>
+              <!-- Placeholder for interruptions chart -->
+              <div
+                class="chart-placeholder"
+                style="
+                  height: 250px;
+                  background-color: #f8f9fa;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  border-radius: 4px;
+                "
+              >
+                <div class="text-center">
+                  <i class="fas fa-bell-slash fa-4x text-secondary mb-3"></i>
+                  <p class="text-muted">
+                    Interruption analysis chart will appear here
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Goal Progress -->
+        <div class="col-lg-6">
+          <div class="card mb-4">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Goal Progress</h5>
+            </div>
+            <div class="card-body">
+              <p class="card-text text-muted mb-3">
+                Progress toward weekly study goals by subject
+              </p>
+              <!-- Placeholder for goal progress chart -->
+              <div
+                class="chart-placeholder"
+                style="
+                  height: 250px;
+                  background-color: #f8f9fa;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  border-radius: 4px;
+                "
+              >
+                <div class="text-center">
+                  <i class="fas fa-bullseye fa-4x text-secondary mb-3"></i>
+                  <p class="text-muted">Goal progress chart will appear here</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Table -->
+      <div class="card mt-4">
+        <div
+          class="card-header bg-light d-flex justify-content-between align-items-center"
+        >
+          <h5 class="mb-0">Study Session Data</h5>
+          <button class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-download me-1"></i>Export Data
+          </button>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Subject</th>
+                  <th>Duration</th>
+                  <th>Efficiency</th>
+                  <th>Location</th>
+                  <th>Interruptions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>2025-04-23</td>
+                  <td>Mathematics</td>
+                  <td>2h 15m</td>
+                  <td>4/5</td>
+                  <td>Library</td>
+                  <td>2</td>
+                </tr>
+                <tr>
+                  <td>2025-04-22</td>
+                  <td>Computer Science</td>
+                  <td>3h 30m</td>
+                  <td>5/5</td>
+                  <td>Home Office</td>
+                  <td>0</td>
+                </tr>
+                <tr>
+                  <td>2025-04-22</td>
+                  <td>Physics</td>
+                  <td>1h 45m</td>
+                  <td>3/5</td>
+                  <td>Coffee Shop</td>
+                  <td>4</td>
+                </tr>
+                <tr>
+                  <td>2025-04-21</td>
+                  <td>Literature</td>
+                  <td>2h 00m</td>
+                  <td>4/5</td>
+                  <td>Library</td>
+                  <td>1</td>
+                </tr>
+                <tr>
+                  <td>2025-04-20</td>
+                  <td>Mathematics</td>
+                  <td>1h 30m</td>
+                  <td>3/5</td>
+                  <td>Home Office</td>
+                  <td>3</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-6">
+            <h5><i class="fas fa-clock me-2"></i>StudyTime Tracker</h5>
+            <p>Track, analyze, and optimize your study habits.</p>
+          </div>
+          <div class="col-md-3">
+            <h5>Links</h5>
+            <ul class="list-unstyled">
+              <li><a href="index.html" class="text-white">Home</a></li>
+              <li><a href="upload.html" class="text-white">Record Time</a></li>
+              <li><a href="visualize.html" class="text-white">Analytics</a></li>
+              <li><a href="share.html" class="text-white">Share</a></li>
+            </ul>
+          </div>
+          <div class="col-md-3">
+            <h5>Contact</h5>
+            <ul class="list-unstyled">
+              <li>24076678@student.uwa.edu.au</li>
+              <li>23951946@student.uwa.edu.au</li>
+              <li>24074639@student.uwa.edu.au</li>
+              <li>24318358@student.uwa.edu.au</li>
+              <li>University of Western Australia</li>
+            </ul>
+          </div>
+        </div>
+        <hr />
+        <div class="text-center">
+          <p>&copy; 2025 StudyTime Tracker - CITS5505 Project</p>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="js/main.js"></script>
+  </body>
+</html>
