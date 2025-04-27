@@ -19,7 +19,7 @@ This project is developed as part of the CITS3403 Agile Web Development course.
 |----------|------|-----------------|
 | 23951946 | [Bowen Dai] | [goodlearner233] |
 | 24074639 | [David Du] | [DDuu123321] |
-| 24318358 | [Srinath Rajan] | [GitHub Username] |
+| 24318358 | [Srinath Rajan] | [Srinath Rajan] |
 | 24076678 | [Wei Dai] | [WTTheCoder] |
 
 ## Installation and Setup
