@@ -50,22 +50,22 @@ python -m pytest
 
 ## Project Structure
 study-time-tracker/
-├── app/                          # Flask 应用主目录
-│   ├── __pycache__/              # Python缓存文件
-│   ├── static/                   # 静态资源目录
-│   │   ├── css/                  # CSS样式表目录
-│   │   │   └── style.css         # 主样式表 (4 KB)
-│   │   └── js/                   # JavaScript脚本目录
-│   │       └── main.js           # 主JavaScript文件 (7 KB)
-│   ├── templates/                # HTML模板目录
-│   │   ├── index.html            # 首页模板 (9 KB)
-│   │   ├── share.html            # 分享页面 (23 KB)
-│   │   ├── upload.html           # 上传页面 (15 KB)
-│   │   └── visualize.html        # 数据可视化页面 (14 KB)
-│   ├── __init__.py               # 应用初始化文件 (1 KB)
-│   ├── forms.py                  # 表单定义 (2 KB)
-│   ├── models.py                 # 数据库模型 (1 KB)
-│   └── routes.py                 # 应用路由 (3 KB)
-├── instance/                     # Flask实例配置
-├── venv/                         # 虚拟环境
-└── run.py                        # 应用入口点 (1 KB)
+├── app/                         
+│   ├── __pycache__/              
+│   ├── static/                   
+│   │   ├── css/                
+│   │   │   └── style.css       
+│   │   └── js/                 
+│   │       └── main.js        
+│   ├── templates/            
+│   │   ├── index.html           
+│   │   ├── share.html         
+│   │   ├── upload.html          
+│   │   └── visualize.html     
+│   ├── __init__.py              
+│   ├── forms.py                
+│   ├── models.py               
+│   └── routes.py              
+├── instance/            
+├── venv/                 
+└── run.py             
