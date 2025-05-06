@@ -50,29 +50,22 @@ python -m pytest
 
 ## Project Structure
 study-time-tracker/
-├── app/                 # Main application package
-│   ├── init.py      # Application initialization
-│   ├── models.py        # Database models
-│   ├── routes.py        # Application routes
-│   ├── forms.py         # Form definitions
-│   ├── templates/       # HTML templates
-│   │   ├── index.html   # Home page template
-│   │   ├── upload.html  # Data upload interface
-│   │   ├── visualize.html# Data visualization page
-│   │   └── share.html   # Data sharing options
-│   └── static/          # Static files
-│       ├── css/         # CSS stylesheets
-│       │   └── style.css# Main stylesheet
-│       ├── js/          # JavaScript files
-│       │   └── main.js  # Main JavaScript file
-│       └── img/         # Image assets
-├── migrations/          # Database migration files
-├── tests/               # Test files
-│   ├── init.py
-│   ├── test_models.py   # Tests for database models
-│   ├── test_routes.py   # Tests for application routes
-│   └── test_forms.py    # Tests for forms
-├── config.py            # Configuration settings
-├── requirements.txt     # Project dependencies
-├── run.py               # Application entry point
-└── README.md            # Project documentation
+├── app/                          # Flask 应用主目录
+│   ├── __pycache__/              # Python缓存文件
+│   ├── static/                   # 静态资源目录
+│   │   ├── css/                  # CSS样式表目录
+│   │   │   └── style.css         # 主样式表 (4 KB)
+│   │   └── js/                   # JavaScript脚本目录
+│   │       └── main.js           # 主JavaScript文件 (7 KB)
+│   ├── templates/                # HTML模板目录
+│   │   ├── index.html            # 首页模板 (9 KB)
+│   │   ├── share.html            # 分享页面 (23 KB)
+│   │   ├── upload.html           # 上传页面 (15 KB)
+│   │   └── visualize.html        # 数据可视化页面 (14 KB)
+│   ├── __init__.py               # 应用初始化文件 (1 KB)
+│   ├── forms.py                  # 表单定义 (2 KB)
+│   ├── models.py                 # 数据库模型 (1 KB)
+│   └── routes.py                 # 应用路由 (3 KB)
+├── instance/                     # Flask实例配置
+├── venv/                         # 虚拟环境
+└── run.py                        # 应用入口点 (1 KB)
