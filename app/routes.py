@@ -1,3 +1,4 @@
+
 from flask import Blueprint, render_template
 from flask import render_template, request, redirect, url_for, flash
 from .forms import StudyRecordForm
@@ -171,3 +172,4 @@ def ai_recommendations():
             "error": "Failed to generate recommendations",
             "message": str(e)
         }), 500
+
