@@ -23,19 +23,19 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <!--Chart-->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <!-- Chart.js Heatmap Plugin -->
-<script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@1.1.0/dist/chartjs-chart-matrix.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@1.1.0/dist/chartjs-chart-matrix.min.js"></script>
     <!-- Chart.js Color Palette -->
     <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
-
-
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   </head>
   <body>
     <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
       <div class="container">
-        <a class="navbar-brand" href="index.html">
+        <a class="navbar-brand" href="{{ url_for('main.index') }}">
           <i class="fas fa-clock me-2"></i>StudyTime Tracker
         </a>
         <button
@@ -49,16 +49,16 @@
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav ms-auto">
             <li class="nav-item">
-              <a class="nav-link" href="index.html">Home</a>
+              <a class="nav-link" href="{{ url_for('main.index') }}">Home</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="upload.html">Record Time</a>
+              <a class="nav-link" href="{{ url_for('main.upload') }}">Record Time</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link active" href="visualize.html">Analytics</a>
+              <a class="nav-link active" href="{{ url_for('main.visualize') }}">Analytics</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="share.html">Share</a>
+              <a class="nav-link" href="{{ url_for('main.share') }}">Share</a>
             </li>
           </ul>
         </div>
@@ -153,8 +153,8 @@
               <h5 class="mb-0">Study Time Over Selected Range</h5>
             </div>
             <div class="card-body">
-              <!-- 画布容器，设置固定高度 + 居中 + 背景色 -->
               <div
+                class="chart-placeholder"
                 style="
                   height: 300px;
                   background-color: #f8f9fa;
@@ -164,7 +164,7 @@
                   border-radius: 4px;
                 "
               >
-                <canvas id="studyBarChart" style="max-width: 100%; max-height: 100%;"></canvas>
+                <canvas id="studyBarChart" height="280" style="max-width: 100%; max-height: 100%;"></canvas>
               </div>
             </div>
           </div>
@@ -253,19 +253,22 @@
   </div>
 </div>
 
-<!-- Time × Location Efficiency (3D Bar Chart) -->
+<!-- Time × Location Efficiency (3D Scatter Chart) -->
 <div class="col-lg-6">
   <div class="card mb-4">
     <div class="card-header bg-light">
-      <h5 class="mb-0">Time × Location Efficiency</h5>
+      <h5 class="mb-0">Time × Location Efficiency (3D)</h5>
     </div>
     <div class="card-body">
       <p class="card-text text-muted mb-3">
-        Average efficiency across different time slots and locations
+        Study efficiency visualization across time slots and locations (3D interactive)
       </p>
-      <!-- 图表容器 -->
-      <div style="height: 350px;">
+      <!-- 3D 图表容器 -->
+      <div style="height: 380px; position: relative;">
         <div id="timeLocationHeatmap" style="width: 100%; height: 100%;"></div>
+        <div class="chart-controls" style="position: absolute; bottom: 10px; right: 10px; z-index: 100;">
+          <small class="text-muted d-block mb-1">Tip: Click and drag to rotate</small>
+        </div>
       </div>
     </div>
   </div>
@@ -319,7 +322,6 @@
                   <th>Duration</th>
                   <th>Efficiency</th>
                   <th>Location</th>
-                  <th>Interruptions</th>
                 </tr>
               </thead>
               <tbody>
@@ -333,7 +335,6 @@
                   </td>
                   <td>{{ s.efficiency }}/5</td>
                   <td>{{ s.location }}</td>
-                  <td>{{ s.interruptions }}</td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -355,10 +356,10 @@
           <div class="col-md-3">
             <h5>Links</h5>
             <ul class="list-unstyled">
-              <li><a href="index.html" class="text-white">Home</a></li>
-              <li><a href="upload.html" class="text-white">Record Time</a></li>
-              <li><a href="visualize.html" class="text-white">Analytics</a></li>
-              <li><a href="share.html" class="text-white">Share</a></li>
+              <li><a href="{{ url_for('main.index') }}" class="text-white">Home</a></li>
+              <li><a href="{{ url_for('main.upload') }}" class="text-white">Record Time</a></li>
+              <li><a href="{{ url_for('main.visualize') }}" class="text-white">Analytics</a></li>
+              <li><a href="{{ url_for('main.share') }}" class="text-white">Share</a></li>
             </ul>
           </div>
           <div class="col-md-3">
@@ -379,9 +380,57 @@
       </div>
     </footer>
 
+    <!-- 在footer前添加 -->
+    <script>
+      // 页面加载完成后检查图表容器
+      window.addEventListener('load', function() {
+        console.log('Page fully loaded, checking chart containers...');
+        
+        // 检查各图表容器
+        const containers = [
+          'studyBarChart',
+          'subjectPieChart',
+          'efficiencyTimeChart',
+          'locationEfficiencyChart',
+          'timeLocationHeatmap'
+        ];
+        
+        containers.forEach(id => {
+          const element = document.getElementById(id);
+          console.log(`Chart container "${id}": ${element ? 'Found' : 'Missing'}`);
+        });
+        
+        // 尝试列出所有col-lg-4和col-lg-8元素，以便调试选择器
+        console.log('Debugging selectors:');
+        console.log('col-lg-8 elements:', document.querySelectorAll('.col-lg-8').length);
+        console.log('col-lg-4 elements:', document.querySelectorAll('.col-lg-4').length);
+        console.log('Location container:', document.querySelector('.col-lg-4:nth-of-type(2) .card-body div'));
+        
+        // 检查charts.js是否加载
+        console.log('Checking if chart functions are loaded:');
+        console.log('updateStudyBarChart exists:', typeof updateStudyBarChart === 'function');
+        console.log('updateSubjectPieChart exists:', typeof updateSubjectPieChart === 'function');
+        console.log('updateEfficiencyTimeChart exists:', typeof updateEfficiencyTimeChart === 'function');
+        console.log('updateLocationEfficiencyChart exists:', typeof updateLocationEfficiencyChart === 'function');
+        
+        // 检查CSRF令牌
+        const token = document.querySelector('input[name="csrf_token"]');
+        console.log(`CSRF token: ${token ? 'Found' : 'Missing'}`);
+        
+        // 尝试手动触发数据加载
+        const filterApplyBtn = document.getElementById('filterApply');
+        if (filterApplyBtn) {
+          console.log('Manually triggering filter apply...');
+          filterApplyBtn.click();
+        }
+      });
+    </script>
+
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/typewriter.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ai-recommendations.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
   </body>
 </html>

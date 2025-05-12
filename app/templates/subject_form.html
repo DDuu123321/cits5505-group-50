@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - StudyTime Tracker</title>
+    <title>{{ title }} - StudyTime Tracker</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome Icons -->
@@ -27,65 +27,64 @@
                         <a class="nav-link" href="{{ url_for('main.index') }}">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" href="{{ url_for('main.register') }}">Register</a>
+                        <a class="nav-link" href="{{ url_for('main.upload') }}">Record Time</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('main.login') }}">Login</a>
+                        <a class="nav-link" href="{{ url_for('main.visualize') }}">Analytics</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.share') }}">Share</a>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
 
+    <header class="bg-light py-4">
+        <div class="container">
+            <h1>{{ title }}</h1>
+            <p class="lead">Add a new subject to track your study time.</p>
+        </div>
+    </header>
+
     <div class="container py-5">
         <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="card login-card">
-                    <div class="card-header bg-primary text-white">
-                        <h3 class="mb-0">Create Account</h3>
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Subject Details</h5>
                     </div>
                     <div class="card-body">
-                        <form method="POST" action="{{ url_for('main.register') }}">
+                        <form method="POST" action="">
                             {{ form.hidden_tag() }}
                             <div class="mb-3">
-                                <label for="username" class="form-label">Username</label>
-                                {{ form.username(class="form-control", id="username") }}
-                                {% if form.username.errors %}
+                                <label for="name" class="form-label">Subject Name</label>
+                                {{ form.name(class="form-control", id="name") }}
+                                {% if form.name.errors %}
                                     <div class="text-danger">
-                                        {% for error in form.username.errors %}
+                                        {% for error in form.name.errors %}
                                             <span>{{ error }}</span>
                                         {% endfor %}
                                     </div>
                                 {% endif %}
                             </div>
                             <div class="mb-3">
-                                <label for="email" class="form-label">Email Address</label>
-                                {{ form.email(class="form-control", id="email") }}
-                                {% if form.email.errors %}
+                                <label for="color_code" class="form-label">Color Code (e.g., #FF6384)</label>
+                                {{ form.color_code(class="form-control", id="color_code") }}
+                                {% if form.color_code.errors %}
                                     <div class="text-danger">
-                                        {% for error in form.email.errors %}
+                                        {% for error in form.color_code.errors %}
                                             <span>{{ error }}</span>
                                         {% endfor %}
                                     </div>
                                 {% endif %}
                             </div>
                             <div class="mb-3">
-                                <label for="password" class="form-label">Password</label>
-                                {{ form.password(class="form-control", id="password") }}
-                                {% if form.password.errors %}
+                                <label for="target_hours" class="form-label">Target Hours Per Week</label>
+                                {{ form.target_hours(class="form-control", id="target_hours") }}
+                                {% if form.target_hours.errors %}
                                     <div class="text-danger">
-                                        {% for error in form.password.errors %}
-                                            <span>{{ error }}</span>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
-                            <div class="mb-3">
-                                <label for="confirm_password" class="form-label">Confirm Password</label>
-                                {{ form.confirm_password(class="form-control", id="confirm_password") }}
-                                {% if form.confirm_password.errors %}
-                                    <div class="text-danger">
-                                        {% for error in form.confirm_password.errors %}
+                                        {% for error in form.target_hours.errors %}
                                             <span>{{ error }}</span>
                                         {% endfor %}
                                     </div>
@@ -95,9 +94,6 @@
                                 {{ form.submit(class="btn btn-primary") }}
                             </div>
                         </form>
-                        <div class="text-center mt-3">
-                            <small class="text-muted">Already have an account? <a href="{{ url_for('main.login') }}">Login here</a></small>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -116,8 +112,9 @@
                     <h5>Links</h5>
                     <ul class="list-unstyled">
                         <li><a href="{{ url_for('main.index') }}" class="text-white">Home</a></li>
-                        <li><a href="{{ url_for('main.register') }}" class="text-white">Register</a></li>
-                        <li><a href="{{ url_for('main.login') }}" class="text-white">Login</a></li>
+                        <li><a href="{{ url_for('main.upload') }}" class="text-white">Record Time</a></li>
+                        <li><a href="{{ url_for('main.visualize') }}" class="text-white">Analytics</a></li>
+                        <li><a href="{{ url_for('main.share') }}" class="text-white">Share</a></li>
                     </ul>
                 </div>
                 <div class="col-md-3">
