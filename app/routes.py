@@ -312,7 +312,9 @@ def profile():
         if duration.total_seconds() < 0:
             duration += timedelta(days=1)
         total_seconds += duration.total_seconds()
-        total_study_time = total_seconds // 3600  # Convert to hours
+    
+    # 确保即使没有学习记录也会定义 total_study_time
+    total_study_time = total_seconds // 3600  # Convert to hours
     
     return render_template(
         'profile.html', 
@@ -328,17 +330,26 @@ def add_subject():
     form = SubjectForm()
     
     if form.validate_on_submit():
-        subject = Subject(
-            name=form.name.data,
-            color_code=form.color_code.data,
-            user_id=current_user.id
-        )
-        
-        db.session.add(subject)
-        db.session.commit()
-        
-        flash('Subject added successfully!', 'success')
-        return redirect(url_for('main.profile'))
+        try:
+            # 将目标小时数转换为浮点数
+            target_hours = float(form.target_hours.data)
+            
+            subject = Subject(
+                name=form.name.data,
+                color_code=form.color_code.data,
+                target_hours_per_week=target_hours,
+                user_id=current_user.id
+            )
+            
+            db.session.add(subject)
+            db.session.commit()
+            
+            flash('Subject added successfully!', 'success')
+            return redirect(url_for('main.profile'))
+        except ValueError:
+            flash('Invalid target hours value. Please enter a valid number.', 'danger')
+        except Exception as e:
+            flash(f'Error adding subject: {str(e)}', 'danger')
         
     return render_template('subject_form.html', title='Add Subject', form=form)
 
@@ -452,33 +463,41 @@ def ai_recommendations():
             
         # Prepare prompt for Gemini
         prompt = f"""
-        As an AI study coach, analyze this data and provide 3-4 specific, actionable recommendations to improve study efficiency.
-        
-        Study subject distribution (in minutes):
-        {json.dumps(subject_distribution)}
-        
-        Study time-location efficiency data:
-        Time slots: {json.dumps(time_location_data.get('timeSlots', []))}
-        Locations: {json.dumps(time_location_data.get('locations', []))}
-        Data points (sample of up to 10):
-        {json.dumps(time_location_data.get('dataPoints', [])[:10])}
-        
-        For each recommendation, provide:
-        1. A short, clear title (1-5 words)
-        2. A detailed explanation with actionable advice (1-3 sentences)
-        3. An appropriate Font Awesome icon class from this list: fa-clock, fa-map-marker-alt, fa-hourglass-half, fa-calendar-check, fa-balance-scale, fa-lightbulb, fa-brain
-        
-        Format your response as a JSON array of objects like this:
-        [
-          {{
-            "title": "Example Title",
-            "description": "Example detailed description with advice.",
-            "icon": "fa-example-icon"
-          }}
-        ]
-        
-        Ensure your response is valid JSON and nothing else.
-        """
+    As an AI study coach, analyze this student's data and provide 4 highly specific, personalized recommendations. Focus on the following key areas:
+
+    SUBJECT TIME DISTRIBUTION (minutes spent on each subject):
+    {json.dumps(subject_distribution)}
+
+    TIME-LOCATION EFFICIENCY DATA:
+    Time slots: {json.dumps(time_location_data.get('timeSlots', []))}
+    Locations: {json.dumps(time_location_data.get('locations', []))}
+    Data points: {json.dumps(time_location_data.get('dataPoints', [])[:10])}
+
+    Please provide PRECISE recommendations on:
+    1. OPTIMAL STUDY LOCATION & TIME: Based on efficiency data, identify the exact location and time period where the student performs best. Be specific (e.g., "Library during Afternoon shows 4.7/5 efficiency").
+
+    2. SUBJECT BALANCE: Identify which subjects receive too little study time compared to their importance. Suggest specific time redistributions (e.g., "Increase Physics from 120 to 180 minutes weekly").
+
+    3. LOCATION OPTIMIZATION: Recommend specific location changes for particular subjects based on efficiency patterns (e.g., "Study Mathematics in the Library instead of Home").
+
+    4. TIME SLOT UTILIZATION: Suggest how to leverage their most productive time periods for challenging subjects (e.g., "Reserve Morning slots for calculus when your efficiency is highest").
+
+    For each recommendation, provide:
+    1. A concise, specific title (3-5 words)
+    2. A detailed explanation with concrete, actionable advice (2-3 sentences)
+    3. An appropriate Font Awesome icon from: fa-clock, fa-map-marker-alt, fa-book, fa-calendar-check, fa-lightbulb, fa-brain, fa-balance-scale
+
+    Format your response as a JSON array like:
+    [
+      {{
+        "title": "Study Physics at Library",
+        "description": "Your efficiency for Physics increases to 4.8/5 when studying at the Library. Schedule your most challenging Physics topics during Afternoon sessions at this location.",
+        "icon": "fa-map-marker-alt"
+      }}
+    ]
+
+    Ensure your response is valid JSON and nothing else.
+"""
         
         # Gemini API URL
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
