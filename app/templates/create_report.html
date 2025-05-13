@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ title }} - StudyTime Tracker</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Font Awesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <!-- Custom CSS -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+      <div class="container">
+        <a class="navbar-brand" href="{{ url_for('main.index') }}">
+          <i class="fas fa-clock me-2"></i>StudyTime Tracker
+        </a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('main.index') }}">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('main.upload') }}"
+                >Record Time</a
+              >
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('main.visualize') }}"
+                >Analytics</a
+              >
+            </li>
+            <li class="nav-item">
+              <a class="nav-link active" href="{{ url_for('main.share') }}"
+                >Share</a
+              >
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <header class="bg-light py-4">
+      <div class="container">
+        <h1>{{ title }}</h1>
+        <p class="lead">Create a shareable report of your study data.</p>
+      </div>
+    </header>
+
+    <div class="container py-5">
+      <div class="row justify-content-center">
+        <div class="col-md-8">
+          <div class="card">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Report Details</h5>
+            </div>
+            <div class="card-body">
+              <form method="POST" action="">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                  <label for="title" class="form-label">Report Title</label>
+                  {{ form.title(class="form-control", id="title") }} {% if
+                  form.title.errors %}
+                  <div class="text-danger">
+                    {% for error in form.title.errors %}
+                    <span>{{ error }}</span>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+                <div class="mb-3">
+                  <label for="description" class="form-label"
+                    >Description</label
+                  >
+                  {{ form.description(class="form-control", id="description",
+                  rows=3) }} {% if form.description.errors %}
+                  <div class="text-danger">
+                    {% for error in form.description.errors %}
+                    <span>{{ error }}</span>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <label for="date_from" class="form-label"
+                      >Date Range Start</label
+                    >
+                    {{ form.date_from(class="form-control", id="date_from") }}
+                    {% if form.date_from.errors %}
+                    <div class="text-danger">
+                      {% for error in form.date_from.errors %}
+                      <span>{{ error }}</span>
+                      {% endfor %}
+                    </div>
+                    {% endif %}
+                  </div>
+                  <div class="col-md-6">
+                    <label for="date_to" class="form-label"
+                      >Date Range End</label
+                    >
+                    {{ form.date_to(class="form-control", id="date_to") }} {% if
+                    form.date_to.errors %}
+                    <div class="text-danger">
+                      {% for error in form.date_to.errors %}
+                      <span>{{ error }}</span>
+                      {% endfor %}
+                    </div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label for="subjects" class="form-label"
+                    >Subjects to Include</label
+                  >
+                  {{ form.subjects(class="form-select", id="subjects") }} {% if
+                  form.subjects.errors %}
+                  <div class="text-danger">
+                    {% for error in form.subjects.errors %}
+                    <span>{{ error }}</span>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+                <div class="mb-3">
+                  <label for="share_with" class="form-label"
+                    >Share With (Email)</label
+                  >
+                  {{ form.share_with(class="form-control", id="share_with") }}
+                  <div class="form-text">
+                    Leave blank to generate access code only.
+                  </div>
+                  {% if form.share_with.errors %}
+                  <div class="text-danger">
+                    {% for error in form.share_with.errors %}
+                    <span>{{ error }}</span>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+                <div class="mb-3">
+                  <label for="permission_level" class="form-label"
+                    >Permission Level</label
+                  >
+                  {{ form.permission_level(class="form-select",
+                  id="permission_level") }} {% if form.permission_level.errors
+                  %}
+                  <div class="text-danger">
+                    {% for error in form.permission_level.errors %}
+                    <span>{{ error }}</span>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+                <div class="mb-3">
+                  <label for="expiry_date" class="form-label"
+                    >Expiration Date (Optional)</label
+                  >
+                  {{ form.expiry_date(class="form-control", id="expiry_date") }}
+                  <div class="form-text">Leave blank for no expiration.</div>
+                  {% if form.expiry_date.errors %}
+                  <div class="text-danger">
+                    {% for error in form.expiry_date.errors %}
+                    <span>{{ error }}</span>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+                <div class="d-grid">
+                  {{ form.submit(class="btn btn-primary") }}
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-6">
+            <h5><i class="fas fa-clock me-2"></i>StudyTime Tracker</h5>
+            <p>Track, analyze, and optimize your study habits.</p>
+          </div>
+          <div class="col-md-3">
+            <h5>Links</h5>
+            <ul class="list-unstyled">
+              <li>
+                <a href="{{ url_for('main.index') }}" class="text-white"
+                  >Home</a
+                >
+              </li>
+              <li>
+                <a href="{{ url_for('main.upload') }}" class="text-white"
+                  >Record Time</a
+                >
+              </li>
+              <li>
+                <a href="{{ url_for('main.visualize') }}" class="text-white"
+                  >Analytics</a
+                >
+              </li>
+              <li>
+                <a href="{{ url_for('main.share') }}" class="text-white"
+                  >Share</a
+                >
+              </li>
+            </ul>
+          </div>
+          <div class="col-md-3">
+            <h5>Contact</h5>
+            <ul class="list-unstyled">
+              <li>24076678@student.uwa.edu.au</li>
+              <li>23951946@student.uwa.edu.au</li>
+              <li>24074639@student.uwa.edu.au</li>
+              <li>24318358@student.uwa.edu.au</li>
+              <li>University of Western Australia</li>
+            </ul>
+          </div>
+        </div>
+        <hr />
+        <div class="text-center">
+          <p>&copy; 2025 StudyTime Tracker - CITS5505 Project</p>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

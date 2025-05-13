@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, BooleanField, TextAreaField, SelectField, DateField, TimeField
+from wtforms import StringField, PasswordField, SubmitField, BooleanField, TextAreaField, SelectField, DateField, TimeField, SelectMultipleField
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError, Regexp
 from app.models import User, Subject
 
@@ -55,21 +55,27 @@ class StudyRecordForm(FlaskForm):
 class SubjectForm(FlaskForm):
     name = StringField('Subject Name', validators=[DataRequired(), Length(max=100)])
     color_code = StringField('Color Code', default='#3498db', validators=[DataRequired()])
-    target_hours_per_week = StringField('Target Hours Per Week', default='5.0', validators=[DataRequired()])
-    target_hours = StringField('Target Hours Per Week', default='5.0', validators=[DataRequired()])
+    target_hours_per_week = StringField('Target Hours Per Week', default='5.0', validators=[
+        DataRequired(),
+        Regexp(r'^\d+(\.\d{1,2})?$', message='Please enter a valid number (e.g. 5.0, 7.5)')
+    ])
     submit = SubmitField('Save Subject')
 
 class ReportForm(FlaskForm):
     title = StringField('Report Title', validators=[DataRequired(), Length(max=100)])
     description = TextAreaField('Description')
-    start_date = DateField('Start Date', format='%Y-%m-%d', validators=[DataRequired()])
-    end_date = DateField('End Date', format='%Y-%m-%d', validators=[DataRequired()])
-    subjects = SelectField('Subjects', choices=[], option_widget=True, multiple=True)
+    
+    # 使用date_from和date_to字段名以匹配模板
+    date_from = DateField('Start Date', format='%Y-%m-%d', validators=[DataRequired()])
+    date_to = DateField('End Date', format='%Y-%m-%d', validators=[DataRequired()])
+    
+    subjects = SelectMultipleField('Subjects')
     permission_level = SelectField('Permission Level', choices=[
         ('view', 'View Only'),
         ('comment', 'View and Comment')
     ])
-    expires_at = DateField('Expiration Date (Optional)', format='%Y-%m-%d')
+    expiry_date = DateField('Expiration Date (Optional)', format='%Y-%m-%d', validators=[])
+    share_with = StringField('Share With (Email)')
     submit = SubmitField('Create Report')
     
     def __init__(self, *args, **kwargs):

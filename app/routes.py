@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
 from app.forms import RegistrationForm, LoginForm, StudyRecordForm, SubjectForm, ReportForm
 from app.models import User, StudySession, Subject, Report
 from flask_login import login_user, current_user, logout_user, login_required
@@ -228,48 +228,232 @@ def visualize():
 @main.route('/share')
 @login_required
 def share():
-    my_reports = Report.query.filter_by(owner_id=current_user.id).all()
-    return render_template('share.html', my_reports=my_reports)
+    """
+    Display the share page with user's shared reports and reports shared with them.
+    
+    This page allows users to:
+    1. View reports they have created and shared
+    2. View reports shared with them by other users
+    3. Access options to create, edit, and delete reports
+    4. Enter access codes to view reports shared via code
+    """
+    # Get reports created by the current user
+    my_reports = Report.query.filter_by(owner_id=current_user.id).order_by(Report.created_at.desc()).all()
+    
+    # Get reports shared with the current user
+    # This is based on reports the user has viewed with access codes
+    # In a more advanced implementation, this could use a SharedWith model to track shares
+    shared_reports = []
+    
+    # Get access error from query parameters (if present)
+    access_error = request.args.get('access_error')
+    
+    return render_template(
+        'share.html',
+        my_reports=my_reports,
+        shared_reports=shared_reports,
+        access_error=access_error
+    )
 
 @main.route('/create_report', methods=['GET', 'POST'])
 @login_required
 def create_report():
+    """
+    Create a new study data report to share with others.
+    
+    This function:
+    1. Displays the report creation form
+    2. Processes form submission
+    3. Creates a new report with a unique access code
+    4. Redirects to the share page on success
+    """
     form = ReportForm(user=current_user)
+    
     if form.validate_on_submit():
-        access_code = str(uuid.uuid4())[:8]
-        
-        new_report = Report(
-            title=form.title.data,
-            description=form.description.data,
-            start_date=form.start_date.data,
-            end_date=form.end_date.data,
-            subjects=','.join(form.subjects.data),
-            permission_level=form.permission_level.data,
-            expires_at=form.expires_at.data,
-            access_code=access_code,
-            owner_id=current_user.id
-        )
-        
-        db.session.add(new_report)
+        try:
+            print("Form validated successfully!")
+            print(f"Form data: Title: {form.title.data}, Date From: {form.date_from.data}, Date To: {form.date_to.data}")
+            
+            # Generate a unique access code (using first 8 chars of a UUID)
+            access_code = str(uuid.uuid4())[:8]
+            
+            # Set default expiration date if not provided
+            expires_at = form.expiry_date.data
+            if not expires_at:
+                expires_at = datetime.now() + timedelta(days=365)  # Default to 1 year
+            
+            # Create new report
+            new_report = Report(
+                title=form.title.data,
+                description=form.description.data,
+                start_date=form.date_from.data,  
+                end_date=form.date_to.data,      
+                subjects=','.join(form.subjects.data) if form.subjects.data else '',
+                permission_level=form.permission_level.data,
+                expires_at=expires_at,           
+                access_code=access_code,
+                owner_id=current_user.id
+            )
+            
+            db.session.add(new_report)
+            db.session.commit()
+            
+            flash('Report created successfully! Share the access code: ' + access_code, 'success')
+            return redirect(url_for('main.share'))
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error creating report: {str(e)}")  
+            flash(f'Error creating report: {str(e)}', 'danger')
+    else:
+        if request.method == 'POST':
+            print("Form validation failed")
+            print(form.errors)  
+    
+    return render_template('create_report.html', title='Create Report', form=form)
+
+@main.route('/edit_report/<int:report_id>', methods=['GET', 'POST'])
+@login_required
+def edit_report(report_id):
+    """
+    Edit an existing study report.
+    
+    This function:
+    1. Retrieves the report by ID
+    2. Verifies the current user is the owner
+    3. Displays the report edit form
+    4. Processes form submission
+    5. Updates the report details
+    """
+    # Get the report
+    report = Report.query.get_or_404(report_id)
+    
+    # Check ownership
+    if report.owner_id != current_user.id:
+        flash('You do not have permission to edit this report.', 'danger')
+        return redirect(url_for('main.share'))
+    
+    # Initialize form with report data
+    form = ReportForm(user=current_user, obj=report)
+    
+    # Pre-populate form fields that have different names than the model
+    if request.method == 'GET':
+        form.date_from.data = report.start_date
+        form.date_to.data = report.end_date
+        form.expiry_date.data = report.expires_at
+        if report.subjects:
+            form.subjects.data = report.subjects.split(',')
+    
+    if form.validate_on_submit():
+        try:
+            # Update report details
+            report.title = form.title.data
+            report.description = form.description.data
+            report.start_date = form.date_from.data
+            report.end_date = form.date_to.data
+            report.subjects = ','.join(form.subjects.data) if form.subjects.data else ''
+            report.permission_level = form.permission_level.data
+            report.expires_at = form.expiry_date.data
+            
+            db.session.commit()
+            
+            flash('Report updated successfully!', 'success')
+            return redirect(url_for('main.share'))
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error updating report: {str(e)}")  # 添加错误日志
+            flash(f'Error updating report: {str(e)}', 'danger')
+    else:
+        if request.method == 'POST':
+            print("Form validation failed")
+            print(form.errors)  # 打印表单验证错误
+    
+    return render_template('create_report.html', title='Edit Report', form=form, editing=True)
+
+@main.route('/delete_report/<int:report_id>', methods=['POST'])
+@login_required
+def delete_report(report_id):
+    """
+    Delete a study report.
+    
+    This function:
+    1. Retrieves the report by ID
+    2. Verifies the current user is the owner
+    3. Deletes the report from the database
+    """
+    # Get the report
+    report = Report.query.get_or_404(report_id)
+    
+    # Check ownership
+    if report.owner_id != current_user.id:
+        flash('You do not have permission to delete this report.', 'danger')
+        return redirect(url_for('main.share'))
+    
+    try:
+        # Delete the report
+        db.session.delete(report)
         db.session.commit()
         
-        flash('Report created successfully!', 'success')
-        return redirect(url_for('main.share'))
-        
-    return render_template('create_report.html', title='Create Report', form=form)
+        flash('Report deleted successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting report: {str(e)}', 'danger')
+    
+    return redirect(url_for('main.share'))
+
+@main.route('/access_report', methods=['POST'])
+def access_report():
+    """
+    Access a report using its access code.
+    
+    This function:
+    1. Gets the access code from the form
+    2. Tries to find a report with that code
+    3. Redirects to the report view if found
+    4. Shows an error message if not found or expired
+    """
+    access_code = request.form.get('access_code')
+    
+    if not access_code:
+        return redirect(url_for('main.share', access_error='Please enter an access code.'))
+    
+    # Try to find a report with this access code
+    report = Report.query.filter_by(access_code=access_code).first()
+    
+    if not report:
+        return redirect(url_for('main.share', access_error='Invalid access code. Please check and try again.'))
+    
+    # Check if the report has expired
+    if report.expires_at and report.expires_at < datetime.utcnow():
+        return redirect(url_for('main.share', access_error='This report has expired.'))
+    
+    # All good, redirect to view the report
+    return redirect(url_for('main.view_report', access_code=access_code))
 
 @main.route('/report/<access_code>')
 def view_report(access_code):
+    """
+    View a shared report using its access code.
+    
+    This function:
+    1. Retrieves the report by access code
+    2. Checks if the report has expired
+    3. Retrieves relevant study session data
+    4. Renders the report view template
+    """
+    # Get the report
     report = Report.query.filter_by(access_code=access_code).first_or_404()
     
     # Check if report has expired
-    if report.expires_at < datetime.utcnow():
+    if report.expires_at and report.expires_at < datetime.utcnow():
         flash('This report has expired', 'danger')
         return redirect(url_for('main.index'))
-        
-    # Ensure correct date range is passed
+    
+    # Get subject list from the report
     subject_list = report.subjects.split(',') if report.subjects else ['']
     
+    # Filter study sessions based on report criteria
     sessions = StudySession.query.filter(
         StudySession.user_id == report.owner_id,
         StudySession.date >= report.start_date,
@@ -277,25 +461,81 @@ def view_report(access_code):
         StudySession.subject.in_(subject_list) if subject_list[0] else True
     ).all()
     
+    # Process session data for display
     session_data = []
+    total_hours = 0
+    total_efficiency = 0
+    subject_times = {}
+    daily_times = {}
+    location_efficiency = {}
+    
     for s in sessions:
+        # Calculate duration
         duration = datetime.combine(s.date, s.end_time) - datetime.combine(s.date, s.start_time)
         if duration.total_seconds() < 0:  # Handle overnight sessions
             duration += timedelta(days=1)
-            
+        
         hours = int(duration.total_seconds() // 3600)
         minutes = int((duration.total_seconds() % 3600) // 60)
+        duration_str = f"{hours}h {minutes}m"
         
+        # Update totals
+        total_hours += duration.total_seconds() / 3600
+        total_efficiency += s.efficiency
+        
+        # Track subject study time
+        if s.subject in subject_times:
+            subject_times[s.subject] += duration.total_seconds() / 60  # minutes
+        else:
+            subject_times[s.subject] = duration.total_seconds() / 60
+            
+        # Track daily study time
+        day_str = s.date.strftime('%Y-%m-%d')
+        if day_str in daily_times:
+            daily_times[day_str] += duration.total_seconds() / 3600  # hours
+        else:
+            daily_times[day_str] = duration.total_seconds() / 3600
+            
+        # Track location efficiency
+        if s.location in location_efficiency:
+            location_efficiency[s.location].append(s.efficiency)
+        else:
+            location_efficiency[s.location] = [s.efficiency]
+        
+        # Format session for display
         session_data.append({
             'id': s.id,
             'date': s.date.strftime('%Y-%m-%d'),
-            'duration': f"{hours}h {minutes}m",
+            'subject': s.subject,
+            'duration': duration_str,
             'efficiency': s.efficiency,
             'location': s.location,
-            'notes': s.notes
+            'notes': s.notes,
+            'interruptions': 'None'  # Placeholder, could be expanded in the future
         })
-        
-    return render_template('view_report.html', report=report, sessions=session_data)
+    
+    # Calculate averages
+    avg_efficiency = round(total_efficiency / len(sessions), 1) if sessions else 0
+    
+    # Calculate average efficiency by location
+    location_avg_efficiency = {}
+    for loc, ratings in location_efficiency.items():
+        location_avg_efficiency[loc] = sum(ratings) / len(ratings)
+    
+    # Get the owner's details
+    owner = User.query.get(report.owner_id)
+    
+    return render_template(
+        'view_report.html',
+        report=report,
+        sessions=session_data,
+        owner=owner,
+        total_hours=round(total_hours, 1),
+        avg_efficiency=avg_efficiency,
+        subject_times=subject_times,
+        daily_times=daily_times,
+        location_efficiency=location_avg_efficiency
+    )
 
 @main.route('/profile')
 @login_required
@@ -306,12 +546,14 @@ def profile():
     # Calculate total study time
     sessions = StudySession.query.filter_by(user_id=current_user.id).all()
     total_seconds = 0
+    total_study_time = 0  # 初始化为0，确保即使没有会话也有默认值
     
-    for session in sessions:
-        duration = datetime.combine(session.date, session.end_time) - datetime.combine(session.date, session.start_time)
-        if duration.total_seconds() < 0:
-            duration += timedelta(days=1)
-        total_seconds += duration.total_seconds()
+    if sessions:  # 只有在有会话时才计算
+        for session in sessions:
+            duration = datetime.combine(session.date, session.end_time) - datetime.combine(session.date, session.start_time)
+            if duration.total_seconds() < 0:
+                duration += timedelta(days=1)
+            total_seconds += duration.total_seconds()
         total_study_time = total_seconds // 3600  # Convert to hours
     
     return render_template(
@@ -328,109 +570,146 @@ def add_subject():
     form = SubjectForm()
     
     if form.validate_on_submit():
-        subject = Subject(
-            name=form.name.data,
-            color_code=form.color_code.data,
-            user_id=current_user.id
-        )
-        
-        db.session.add(subject)
-        db.session.commit()
-        
-        flash('Subject added successfully!', 'success')
-        return redirect(url_for('main.profile'))
-        
+        try:
+            target_hours = float(form.target_hours_per_week.data)
+            subject = Subject(
+                name=form.name.data,
+                color_code=form.color_code.data,
+                target_hours_per_week=target_hours,
+                user_id=current_user.id
+            )
+            
+            db.session.add(subject)
+            db.session.commit()
+            
+            flash('Subject added successfully!', 'success')
+            return redirect(url_for('main.profile'))
+        except ValueError as e:
+            flash(f'Error saving subject: Invalid number format for target hours', 'danger')
+        except Exception as e:
+            flash(f'Error saving subject: {str(e)}', 'danger')
+    
     return render_template('subject_form.html', title='Add Subject', form=form)
 
 @main.route('/api/analytics-data', methods=['POST'])
 @login_required
 def analytics_data():
-    data = request.json
-    date_from = datetime.strptime(data.get('dateFrom', '2000-01-01'), '%Y-%m-%d').date()
-    date_to = datetime.strptime(data.get('dateTo', datetime.now().strftime('%Y-%m-%d')), '%Y-%m-%d').date()
-    # Ensure date is valid
-    if date_from > date_to:
-        date_from, date_to = date_to, date_from
-    
-    # Query study sessions for this user in the specified date range
-    sessions = StudySession.query.filter(
-        StudySession.user_id == current_user.id,
-        StudySession.date >= date_from,
-        StudySession.date <= date_to
-    ).all()
-    
-    sessions_data = []
-    total_minutes = 0
-    total_efficiency = 0
-    subject_minutes = {}
-    location_efficiency = {}
-    day_minutes = {}
-    for session in sessions:
-        # Calculate session duration (minutes)
-        duration = datetime.combine(session.date, session.end_time) - datetime.combine(session.date, session.start_time)
-        if duration.total_seconds() < 0:  # Handle overnight sessions
-            duration += timedelta(days=1)
+    try:
+        data = request.json or {}
+        # 使用安全的默认值，确保日期字符串不会是None
+        default_from = '2000-01-01'
+        default_to = datetime.now().strftime('%Y-%m-%d')
         
-        minutes = int(duration.total_seconds() // 60)
-        total_minutes += minutes
-        total_efficiency += session.efficiency
+        date_from_str = data.get('dateFrom')
+        date_to_str = data.get('dateTo')
         
-        # Track subject study time
-        if session.subject in subject_minutes:
-            subject_minutes[session.subject] += minutes
-        else:
-            subject_minutes[session.subject] = minutes
-        
-        # Track location efficiency
-        if session.location in location_efficiency:
-            location_efficiency[session.location].append(session.efficiency)
-        else:
-            location_efficiency[session.location] = [session.efficiency]
+        # 确保dateFrom和dateTo是有效的日期字符串
+        if not date_from_str or not isinstance(date_from_str, str):
+            date_from_str = default_from
+        if not date_to_str or not isinstance(date_to_str, str):
+            date_to_str = default_to
             
-        # Track daily study time
-        day_str = session.date.strftime('%Y-%m-%d')
-        if day_str in day_minutes:
-            day_minutes[day_str] += minutes
-        else:
-            day_minutes[day_str] = minutes
+        date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
+        date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
         
-        # Format time display
-        hours = int(minutes // 60)
-        mins = minutes % 60
+        # Ensure date is valid
+        if date_from > date_to:
+            date_from, date_to = date_to, date_from
+            
+        # Query study sessions for this user in the specified date range
+        sessions = StudySession.query.filter(
+            StudySession.user_id == current_user.id,
+            StudySession.date >= date_from,
+            StudySession.date <= date_to
+        ).all()
         
-        sessions_data.append({
-            'id': session.id,
-            'subject': session.subject,
-            'date': session.date.strftime('%Y-%m-%d'),
-            'start_time': session.start_time.strftime('%H:%M'),
-            'end_time': session.end_time.strftime('%H:%M'),
-            'location': session.location,
-            'efficiency': session.efficiency,
-            'notes': session.notes,
-            'duration': f"{hours}h {mins}m",
-            'minutes': minutes,
-            'hour_of_day': session.start_time.hour
+        sessions_data = []
+        total_minutes = 0
+        total_efficiency = 0
+        subject_minutes = {}
+        location_efficiency = {}
+        day_minutes = {}
+        for session in sessions:
+            # Calculate session duration (minutes)
+            duration = datetime.combine(session.date, session.end_time) - datetime.combine(session.date, session.start_time)
+            if duration.total_seconds() < 0:  # Handle overnight sessions
+                duration += timedelta(days=1)
+            
+            minutes = int(duration.total_seconds() // 60)
+            total_minutes += minutes
+            total_efficiency += session.efficiency
+            
+            # Track subject study time
+            if session.subject in subject_minutes:
+                subject_minutes[session.subject] += minutes
+            else:
+                subject_minutes[session.subject] = minutes
+            
+            # Track location efficiency
+            if session.location in location_efficiency:
+                location_efficiency[session.location].append(session.efficiency)
+            else:
+                location_efficiency[session.location] = [session.efficiency]
+                
+            # Track daily study time
+            day_str = session.date.strftime('%Y-%m-%d')
+            if day_str in day_minutes:
+                day_minutes[day_str] += minutes
+            else:
+                day_minutes[day_str] = minutes
+            
+            # Format time display
+            hours = int(minutes // 60)
+            mins = minutes % 60
+            
+            sessions_data.append({
+                'id': session.id,
+                'subject': session.subject,
+                'date': session.date.strftime('%Y-%m-%d'),
+                'start_time': session.start_time.strftime('%H:%M'),
+                'end_time': session.end_time.strftime('%H:%M'),
+                'location': session.location,
+                'efficiency': session.efficiency,
+                'notes': session.notes,
+                'duration': f"{hours}h {mins}m",
+                'minutes': minutes,
+                'hour_of_day': session.start_time.hour
+            })
+            
+        # Calculate statistics
+        avg_efficiency = round(total_efficiency / len(sessions), 1) if sessions else 0
+        
+        # Calculate daily study time variance as a stability indicator
+        day_values = list(day_minutes.values()) if day_minutes else [0]
+        variance = 0
+        if len(day_values) > 1:
+            mean = sum(day_values) / len(day_values)
+            variance = sum((x - mean) ** 2 for x in day_values) / len(day_values)
+        
+        return jsonify({
+            'sessions': sessions_data,
+            'summary': {
+                'total_time': f"{total_minutes // 60}h {total_minutes % 60}m",
+                'avg_efficiency': avg_efficiency,
+                'study_variance': round(variance, 2),
+                'subject_distribution': subject_minutes,
+                'day_distribution': day_minutes
+            }
         })
-    # Calculate statistics
-    avg_efficiency = round(total_efficiency / len(sessions), 1) if sessions else 0
-    
-    # Calculate daily study time variance as a stability indicator
-    day_values = list(day_minutes.values()) if day_minutes else [0]
-    variance = 0
-    if len(day_values) > 1:
-        mean = sum(day_values) / len(day_values)
-        variance = sum((x - mean) ** 2 for x in day_values) / len(day_values)
-    
-    return jsonify({
-        'sessions': sessions_data,
-        'summary': {
-            'total_time': f"{total_minutes // 60}h {total_minutes % 60}m",
-            'avg_efficiency': avg_efficiency,
-            'study_variance': round(variance, 2),
-            'subject_distribution': subject_minutes,
-            'day_distribution': day_minutes
-        }
-    })
+    except Exception as e:
+        print(f"Analytics data error: {str(e)}")
+        # 返回错误响应，但确保前端能够处理它
+        return jsonify({
+            'error': str(e),
+            'sessions': [],
+            'summary': {
+                'total_time': "0h 0m",
+                'avg_efficiency': 0,
+                'study_variance': 0,
+                'subject_distribution': {},
+                'day_distribution': {}
+            }
+        })
 
 @main.route('/api/ai-recommendations', methods=['POST'])
 @login_required
@@ -452,33 +731,41 @@ def ai_recommendations():
             
         # Prepare prompt for Gemini
         prompt = f"""
-        As an AI study coach, analyze this data and provide 3-4 specific, actionable recommendations to improve study efficiency.
-        
-        Study subject distribution (in minutes):
-        {json.dumps(subject_distribution)}
-        
-        Study time-location efficiency data:
-        Time slots: {json.dumps(time_location_data.get('timeSlots', []))}
-        Locations: {json.dumps(time_location_data.get('locations', []))}
-        Data points (sample of up to 10):
-        {json.dumps(time_location_data.get('dataPoints', [])[:10])}
-        
-        For each recommendation, provide:
-        1. A short, clear title (1-5 words)
-        2. A detailed explanation with actionable advice (1-3 sentences)
-        3. An appropriate Font Awesome icon class from this list: fa-clock, fa-map-marker-alt, fa-hourglass-half, fa-calendar-check, fa-balance-scale, fa-lightbulb, fa-brain
-        
-        Format your response as a JSON array of objects like this:
-        [
-          {{
-            "title": "Example Title",
-            "description": "Example detailed description with advice.",
-            "icon": "fa-example-icon"
-          }}
-        ]
-        
-        Ensure your response is valid JSON and nothing else.
-        """
+    As an AI study coach, analyze this student's data and provide 4 highly specific, personalized recommendations. Focus on the following key areas:
+
+    SUBJECT TIME DISTRIBUTION (minutes spent on each subject):
+    {json.dumps(subject_distribution)}
+
+    TIME-LOCATION EFFICIENCY DATA:
+    Time slots: {json.dumps(time_location_data.get('timeSlots', []))}
+    Locations: {json.dumps(time_location_data.get('locations', []))}
+    Data points: {json.dumps(time_location_data.get('dataPoints', [])[:10])}
+
+    Please provide PRECISE recommendations on:
+    1. OPTIMAL STUDY LOCATION & TIME: Based on efficiency data, identify the exact location and time period where the student performs best. Be specific (e.g., "Library during Afternoon shows 4.7/5 efficiency").
+
+    2. SUBJECT BALANCE: Identify which subjects receive too little study time compared to their importance. Suggest specific time redistributions (e.g., "Increase Physics from 120 to 180 minutes weekly").
+
+    3. LOCATION OPTIMIZATION: Recommend specific location changes for particular subjects based on efficiency patterns (e.g., "Study Mathematics in the Library instead of Home").
+
+    4. TIME SLOT UTILIZATION: Suggest how to leverage their most productive time periods for challenging subjects (e.g., "Reserve Morning slots for calculus when your efficiency is highest").
+
+    For each recommendation, provide:
+    1. A concise, specific title (3-5 words)
+    2. A detailed explanation with concrete, actionable advice (2-3 sentences)
+    3. An appropriate Font Awesome icon from: fa-clock, fa-map-marker-alt, fa-book, fa-calendar-check, fa-lightbulb, fa-brain, fa-balance-scale
+
+    Format your response as a JSON array like:
+    [
+      {{
+        "title": "Study Physics at Library",
+        "description": "Your efficiency for Physics increases to 4.8/5 when studying at the Library. Schedule your most challenging Physics topics during Afternoon sessions at this location.",
+        "icon": "fa-map-marker-alt"
+      }}
+    ]
+
+    Ensure your response is valid JSON and nothing else.
+"""
         
         # Gemini API URL
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
@@ -528,8 +815,7 @@ def ai_recommendations():
                                 "icon": rec.get("icon", "fa-lightbulb")
                             }
                             validated_recommendations.append(validated_rec)
-                    
-                    return jsonify({"recommendations": validated_recommendations})
+                            return jsonify({"recommendations": validated_recommendations})
             except json.JSONDecodeError as e:
                 print(f"Failed to parse JSON from API response: {e}")
         
@@ -617,3 +903,13 @@ def generate_fallback_recommendations(subject_distribution, data_points):
         })
     
     return recommendations
+
+# Helper function for generating unique access codes for reports
+def generate_unique_access_code():
+    """Generate a unique access code for reports"""
+    while True:
+        code = str(uuid.uuid4())[:8]  # Take first 8 chars of a UUID
+        # Check if code already exists
+        existing = Report.query.filter_by(access_code=code).first()
+        if not existing:
+            return code
