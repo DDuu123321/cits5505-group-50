@@ -9,28 +9,57 @@
  * @param {string} dateTo - End date (YYYY-MM-DD)
  * @returns {Promise<Array>} Array of study session data
  */
-async function fetchFilteredData(dateFrom, dateTo) {
-  try {
-    const response = await fetch('/api/analytics-data', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCSRFToken()
-      },
-      body: JSON.stringify({ dateFrom, dateTo })
+function buildTimeLocationEfficiencyMap(sessions) {
+  const timeSlots = [
+    { name: "Early Morning", start: 5, end: 9 },
+    { name: "Morning", start: 9, end: 12 },
+    { name: "Noon", start: 12, end: 14 },
+    { name: "Afternoon", start: 14, end: 17 },
+    { name: "Evening", start: 17, end: 20 },
+    { name: "Night", start: 20, end: 24 },
+    { name: "Late Night", start: 0, end: 5 }
+  ];
+
+  const map = {};
+
+  timeSlots.forEach(slot => {
+    map[slot.name] = {};
+  });
+
+  sessions.forEach(session => {
+    const hour = session.hour_of_day;
+    const efficiency = parseFloat(session.efficiency);
+    const location = session.location?.trim();
+
+    if (isNaN(hour) || isNaN(efficiency) || !location) return;
+
+    const slot = timeSlots.find(s => {
+      return s.start < s.end
+        ? hour >= s.start && hour < s.end
+        : hour >= s.start || hour < s.end;
     });
 
-    if (!response.ok) {
-      throw new Error(`Server responded with status: ${response.status}`);
+    if (!slot) return;
+
+    const key = slot.name;
+
+    if (!map[key][location]) {
+      map[key][location] = {
+        sum: 0,
+        count: 0,
+        values: []
+      };
     }
 
-    const data = await response.json();
-    return data.sessions || [];
-  } catch (error) {
-    console.error('Error fetching filtered data:', error);
-    throw error;
-  }
+    map[key][location].sum += efficiency;
+    map[key][location].count += 1;
+    map[key][location].values.push(efficiency);
+  });
+
+  return map;
 }
+
+
 
 /**
  * Get AI recommendations
@@ -59,54 +88,11 @@ async function getAIRecommendations(sessions) {
     }
   });
 
-  // Collect time-location-efficiency data
-  const timeSlots = {
-    "Late Night": [0, 360],     // 00:00 - 06:00
-    "Early Morning": [360, 600], // 06:00 - 10:00
-    "Morning": [600, 720],       // 10:00 - 12:00
-    "Afternoon": [720, 960],     // 12:00 - 16:00
-    "Evening": [960, 1140],      // 16:00 - 19:00
-    "Night": [1140, 1380]        // 19:00 - 23:00
-  };
-
-  // Build data points
-  const xLabels = Object.keys(timeSlots);
-  const yLabels = [...new Set(sessions.map(s => s.location))];
-  const dataPoints = [];
-
-  // Collect data points
-  sessions.forEach(session => {
-    try {
-      // Time processing
-      const timeComponents = session.start_time.split(":").map(Number);
-      if (timeComponents.length < 2) return;
-      
-      const [hour, minute] = timeComponents;
-      const totalMinutes = hour * 60 + minute;
-      
-      // Determine time slot
-      let timeSlot = xLabels.find(label => {
-        const [min, max] = timeSlots[label];
-        return totalMinutes >= min && totalMinutes < max;
-      });
-      
-      if (!timeSlot) return;
-      
-      // Add data point
-      dataPoints.push({
-        timeSlot: timeSlot,
-        location: session.location,
-        efficiency: session.efficiency,
-        date: session.date,
-        duration: session.minutes || parseInt(session.duration)
-      });
-    } catch (e) {
-      console.warn('Error processing session for AI recommendation:', e);
-    }
-  });
+  // ✅ 使用你定义的逻辑构造时间-地点-效率聚合图
+  const timeLocationMap = buildTimeLocationEfficiencyMap(sessions);
+  console.log("📊 Time × Location Efficiency Map (for AI):", timeLocationMap);
 
   try {
-    // Send data to backend API
     const response = await fetch("/api/ai-recommendations", {
       method: "POST",
       headers: {
@@ -114,19 +100,15 @@ async function getAIRecommendations(sessions) {
         "X-CSRFToken": getCSRFToken()
       },
       body: JSON.stringify({
-        subjectDistribution: subjectDistribution,
-        timeLocationData: {
-          timeSlots: xLabels,
-          locations: yLabels,
-          dataPoints: dataPoints
-        }
+        subjectDistribution,
+        timeLocationMap  // ✅ 用新的 map 替代原 dataPoints 等字段
       }),
     });
 
     if (!response.ok) {
       throw new Error(`API Error: ${response.status}`);
     }
-    
+
     const result = await response.json();
     return {
       success: true,
@@ -140,6 +122,7 @@ async function getAIRecommendations(sessions) {
     };
   }
 }
+
 
 /**
  * Display AI recommendations with typewriter effect
@@ -159,80 +142,62 @@ function displayAIRecommendations(recommendations) {
     `;
     return;
   }
+    // 创建全部推荐内容的HTML字符串，一次性插入
+  let allRecommendationsHTML = `
+    <div class="pb-4">
+      <h6 class="border-bottom pb-2 mb-3">Based on your study data, here are some personalized recommendations:</h6>
+      <div id="recommendationsList">
+  `;
   
-  // Create title element
-  const title = document.createElement('h6');
-  title.className = 'border-bottom pb-2 mb-3';
-  container.appendChild(title);
-  
-  // Create list container
-  const list = document.createElement('ul');
-  list.className = 'list-group list-group-flush';
-  container.appendChild(list);
-  
-  // Use typewriter effect for title
-  typeWriter(title, 'Based on your study data, here are some personalized recommendations:', 30);
-  
-  // Add each recommendation with delay and typewriter effect
+  // 添加所有推荐（不使用延迟）
   recommendations.forEach((rec, index) => {
+    allRecommendationsHTML += `
+      <div class="recommendation-item mb-3 p-3 bg-white rounded shadow-sm" id="rec-item-${index}">
+        <div class="d-flex align-items-start">
+          <div class="recommendation-icon flex-shrink-0">
+            <i class="fas ${rec.icon || 'fa-lightbulb'}"></i>
+          </div>
+          <div class="flex-grow-1 ms-3">
+            <h6 class="fw-bold mb-1">${rec.title}</h6>
+            <p class="mb-0" id="rec-desc-${index}"></p>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  
+  allRecommendationsHTML += `
+      </div>
+    </div>
+  `;
+    // 一次性插入所有内容
+  container.innerHTML = allRecommendationsHTML;
+  
+  // 滚动到顶部
+  container.scrollTop = 0;
+  
+  // 逐个为每条推荐添加打字效果
+  recommendations.forEach((rec, index) => {
+    const descElement = document.getElementById(`rec-desc-${index}`);
+    const recItem = document.getElementById(`rec-item-${index}`);
+    
+    // 为了效果，给元素添加初始透明效果
+    if (recItem) {
+      recItem.style.opacity = "0";
+      recItem.style.transform = "translateY(20px)";
+      recItem.style.transition = "all 0.5s ease";
+    }
+    
+    // 延迟显示每条推荐
     setTimeout(() => {
-      // Create list item
-      const item = document.createElement('li');
-      item.className = 'list-group-item border-0 bg-transparent px-0 py-3';
-      list.appendChild(item);
+      if (recItem) {
+        recItem.style.opacity = "1";
+        recItem.style.transform = "translateY(0)";
+      }
       
-      // Create card container
-      const card = document.createElement('div');
-      card.className = 'card border-0 shadow-sm h-100';
-      card.style.opacity = '0';
-      card.style.transform = 'translateY(20px)';
-      card.style.transition = 'opacity 0.5s, transform 0.5s';
-      item.appendChild(card);
-      
-      // Create card content
-      const cardBody = document.createElement('div');
-      cardBody.className = 'card-body';
-      card.appendChild(cardBody);
-      
-      // Create content layout
-      const flex = document.createElement('div');
-      flex.className = 'd-flex';
-      cardBody.appendChild(flex);
-      
-      // Create icon container
-      const iconWrapper = document.createElement('div');
-      iconWrapper.className = 'flex-shrink-0';
-      flex.appendChild(iconWrapper);
-      
-      // Add icon
-      const icon = document.createElement('i');
-      icon.className = `fas ${rec.icon} fa-2x text-primary`;
-      iconWrapper.appendChild(icon);
-      
-      // Create text container
-      const textWrapper = document.createElement('div');
-      textWrapper.className = 'flex-grow-1 ms-3';
-      flex.appendChild(textWrapper);
-      
-      // Add title
-      const heading = document.createElement('h6');
-      heading.className = 'fw-bold mb-1';
-      heading.textContent = rec.title;
-      textWrapper.appendChild(heading);
-      
-      // Add description
-      const description = document.createElement('p');
-      description.className = 'mb-0';
-      textWrapper.appendChild(description);
-      
-      // Show card and start typewriter effect
-      setTimeout(() => {
-        card.style.opacity = '1';
-        card.style.transform = 'translateY(0)';
-        
-        // Use typewriter effect for description text
-        typeWriter(description, rec.description, 15);
-      }, 100);
-    }, 800 * (index + 1)); // Delay each recommendation
+      if (descElement) {
+        typeWriter(descElement, rec.description, 15);
+      }
+    }, 400 * (index + 1));
   });
 }

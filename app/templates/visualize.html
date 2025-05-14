@@ -1,9 +1,3 @@
-<!-- Author: -->
-<!-- Wei Dai (24076678) -->
-<!-- Bowen Dai (23951946) -->
-<!-- David Du (24074639) -->
-<!-- Srinath Rajan (24318358) -->
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -22,6 +16,7 @@
     />
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/charts.css') }}">
     <!--Chart-->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <!-- Chart.js Heatmap Plugin -->
@@ -208,9 +203,11 @@
     </div>
     <div class="card-body">
       <div
+        id="efficiencyTimeChartContainer"
         class="chart-placeholder"
         style="
-          height: 300px;
+          height: 250px; /* 默认高度与Location Efficiency相同 */
+          min-height: 250px; /* 最小高度值 */
           background-color: #f8f9fa;
           display: flex;
           align-items: center;
@@ -218,7 +215,7 @@
           border-radius: 4px;
         "
       >
-        <canvas id="efficiencyTimeChart" height="250" style="width: 100%; max-width: 100%;"></canvas>
+        <canvas id="efficiencyTimeChart" style="width: 100%; max-width: 100%;"></canvas>
       </div>
     </div>
   </div>
@@ -236,7 +233,7 @@
         Average efficiency rating by study location
       </p>
       <!-- Canvas-based chart container -->
-      <div
+      <div id="locationChartContainer"
         style="
           background-color: #f8f9fa;
           padding: 12px;
@@ -245,6 +242,7 @@
           align-items: center;
           justify-content: center;
           height: 250px;
+          transition: height 0.3s ease;
         "
       >
         <canvas id="locationEfficiencyChart" style="max-height: 100%; max-width: 100%;"></canvas>
@@ -286,17 +284,20 @@
       </button>
     </div>
     <div class="card-body">
-      <div id="aiRecommendationsContent" class="chart-placeholder" style="height: 250px; background-color: #f8f9fa; border-radius: 4px; overflow-y: auto; padding: 15px;">
-        <div class="text-center py-4">
-          <i class="fas fa-lightbulb fa-4x text-secondary mb-3"></i>
-          <p class="text-muted">Click the button above to get personalized AI recommendations based on your study data.</p>
+      <!-- 固定高度的容器，与3D图表相同 -->
+      <div style="height: 380px; position: relative;">
+        <div id="aiRecommendationsContent" class="ai-recommendations-container" style="height: 100%; overflow-y: auto; background-color: #f8f9fa; border-radius: 4px; padding: 15px;">
+          <div class="text-center py-4">
+            <i class="fas fa-lightbulb fa-4x text-secondary mb-3"></i>
+            <p class="text-muted">Click the button above to get personalized AI recommendations based on your learning data.</p>
+          </div>
         </div>
-      </div>
-      <div id="aiLoadingIndicator" class="text-center py-5 d-none" style="height: 250px; background-color: #f8f9fa; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
+        <div id="aiLoadingIndicator" class="text-center py-5 d-none" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: #f8f9fa; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-3 text-muted">Analyzing your learning data...</p>
         </div>
-        <p class="mt-3 text-muted">Analyzing your study data...</p>
       </div>
     </div>
   </div>
@@ -400,11 +401,17 @@
           console.log(`Chart container "${id}": ${element ? 'Found' : 'Missing'}`);
         });
         
+        // 检查Location Efficiency容器
+        const locationContainer = document.getElementById('locationChartContainer');
+        console.log('Location container by ID:', locationContainer);
+        if (locationContainer) {
+          console.log('Location container children:', locationContainer.children.length);
+        }
+        
         // 尝试列出所有col-lg-4和col-lg-8元素，以便调试选择器
         console.log('Debugging selectors:');
         console.log('col-lg-8 elements:', document.querySelectorAll('.col-lg-8').length);
         console.log('col-lg-4 elements:', document.querySelectorAll('.col-lg-4').length);
-        console.log('Location container:', document.querySelector('.col-lg-4:nth-of-type(2) .card-body div'));
         
         // 检查charts.js是否加载
         console.log('Checking if chart functions are loaded:');
@@ -423,6 +430,35 @@
           console.log('Manually triggering filter apply...');
           filterApplyBtn.click();
         }
+        
+        // 如果locationEfficiencyChart在5秒后仍然不显示，尝试手动初始化
+        /*
+        setTimeout(function() {
+          const locationEfficiencyChart = document.getElementById('locationEfficiencyChart');
+          if (locationEfficiencyChart) {
+            console.log('Checking if location chart is still empty after 5 seconds');
+            // 检查图表是否已经有内容
+            if (!window.locationEfficiencyChartInstance) {
+              console.log('Location chart still empty, attempting manual initialization');
+              // 手动触发一次数据刷新
+              const dateFromInput = document.getElementById("dateFrom");
+              const dateToInput = document.getElementById("dateTo");
+              if (dateFromInput && dateToInput && dateFromInput.value && dateToInput.value) {
+                console.log('Fetching data manually');
+                fetchAndUpdateAnalytics(dateFromInput.value, dateToInput.value);
+              }
+            }
+          }
+          
+          // 无论图表是否已加载，都尝试同步高度
+          if (typeof syncChartContainerHeights === 'function') {
+            console.log('Syncing chart heights after page load');
+            syncChartContainerHeights();
+          } else {
+            console.error('syncChartContainerHeights function not available');
+          }
+        }, 5000);
+        */
       });
     </script>
 
@@ -431,6 +467,9 @@
     <!-- Custom JS -->
     <script src="{{ url_for('static', filename='js/typewriter.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ai-recommendations.js') }}"></script>
+
+    <!-- charts.js 应该在 main.js 之前引入 -->
+    <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
   </body>
 </html>

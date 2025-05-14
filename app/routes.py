@@ -1,3 +1,4 @@
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
 from app.forms import RegistrationForm, LoginForm, StudyRecordForm, SubjectForm, ReportForm
 from app.models import User, StudySession, Subject, Report, SharedWith
@@ -703,67 +704,32 @@ def add_subject():
 def analytics_data():
     try:
         data = request.json or {}
-        default_from = '2000-01-01'
-        default_to = datetime.now().strftime('%Y-%m-%d')
         
+        # 直接使用用户传入的日期参数，不检查默认值
         date_from_str = data.get('dateFrom')
         date_to_str = data.get('dateTo')
         
-        if not date_from_str or not isinstance(date_from_str, str):
-            date_from_str = default_from
-        if not date_to_str or not isinstance(date_to_str, str):
-            date_to_str = default_to
-            
+        # 转换日期字符串为日期对象
         date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
         date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
         
-        # Ensure date is valid
-        if date_from > date_to:
-            date_from, date_to = date_to, date_from
-            
-        # Query study sessions for this user in the specified date range
+        # 查询此用户在指定日期范围内的学习会话
+        # 保留用户ID过滤，确保数据安全
         sessions = StudySession.query.filter(
             StudySession.user_id == current_user.id,
             StudySession.date >= date_from,
             StudySession.date <= date_to
         ).all()
         
+        # 只处理会话数据，不计算统计信息
         sessions_data = []
-        total_minutes = 0
-        total_efficiency = 0
-        subject_minutes = {}
-        location_efficiency = {}
-        day_minutes = {}
         for session in sessions:
-            # Calculate session duration (minutes)
+            # 计算会话时长
             duration = datetime.combine(session.date, session.end_time) - datetime.combine(session.date, session.start_time)
-            if duration.total_seconds() < 0:  # Handle overnight sessions
+            if duration.total_seconds() < 0:  # 处理跨夜会话
                 duration += timedelta(days=1)
             
             minutes = int(duration.total_seconds() // 60)
-            total_minutes += minutes
-            total_efficiency += session.efficiency
-            
-            # Track subject study time
-            if session.subject in subject_minutes:
-                subject_minutes[session.subject] += minutes
-            else:
-                subject_minutes[session.subject] = minutes
-            
-            # Track location efficiency
-            if session.location in location_efficiency:
-                location_efficiency[session.location].append(session.efficiency)
-            else:
-                location_efficiency[session.location] = [session.efficiency]
-                
-            # Track daily study time
-            day_str = session.date.strftime('%Y-%m-%d')
-            if day_str in day_minutes:
-                day_minutes[day_str] += minutes
-            else:
-                day_minutes[day_str] = minutes
-            
-            # Format time display
             hours = int(minutes // 60)
             mins = minutes % 60
             
@@ -780,101 +746,67 @@ def analytics_data():
                 'minutes': minutes,
                 'hour_of_day': session.start_time.hour
             })
-            
-        # Calculate statistics
-        avg_efficiency = round(total_efficiency / len(sessions), 1) if sessions else 0
         
-        # Calculate daily study time variance as a stability indicator
-        day_values = list(day_minutes.values()) if day_minutes else [0]
-        variance = 0
-        if len(day_values) > 1:
-            mean = sum(day_values) / len(day_values)
-            variance = sum((x - mean) ** 2 for x in day_values) / len(day_values)
-        
+        # 只返回会话数据，不返回summary
         return jsonify({
-            'sessions': sessions_data,
-            'summary': {
-                'total_time': f"{total_minutes // 60}h {total_minutes % 60}m",
-                'avg_efficiency': avg_efficiency,
-                'study_variance': round(variance, 2),
-                'subject_distribution': subject_minutes,
-                'day_distribution': day_minutes
-            }
+            'sessions': sessions_data
         })
     except Exception as e:
         print(f"Analytics data error: {str(e)}")
         return jsonify({
             'error': str(e),
-            'sessions': [],
-            'summary': {
-                'total_time': "0h 0m",
-                'avg_efficiency': 0,
-                'study_variance': 0,
-                'subject_distribution': {},
-                'day_distribution': {}
-            }
+            'sessions': []
         })
 
 @main.route('/api/ai-recommendations', methods=['POST'])
 @login_required
 def ai_recommendations():
     """Use Gemini API to generate intelligent recommendations based on study data"""
-    # Get data sent from frontend
+
     data = request.json
     subject_distribution = data.get('subjectDistribution', {})
-    time_location_data = data.get('timeLocationData', {})
-    
-    if not subject_distribution or not time_location_data:
-        return jsonify({
-            "recommendations": []
-        })
-    
+    time_location_map = data.get('timeLocationMap', {})
+
+    if not subject_distribution or not time_location_map:
+        return jsonify({"recommendations": []})
+
     try:
-        # Get API key
-        api_key = "AIzaSyC9XgtjAb_dx2ORw78gjSMuu8CkTrx14cM"  # Direct API key setting
-            
+        # Set your Gemini API key
+        api_key = "AIzaSyC9XgtjAb_dx2ORw78gjSMuu8CkTrx14cM"
+
         # Prepare prompt for Gemini
         prompt = f"""
-    As an AI study coach, analyze this student's data and provide 4 highly specific, personalized recommendations. Focus on the following key areas:
+As an AI study coach, analyze this student's data and provide 4 highly specific, personalized recommendations. Focus on the following key areas:
 
-    SUBJECT TIME DISTRIBUTION (minutes spent on each subject):
-    {json.dumps(subject_distribution)}
+SUBJECT TIME DISTRIBUTION (minutes spent on each subject):
+{json.dumps(subject_distribution)}
 
-    TIME-LOCATION EFFICIENCY DATA:
-    Time slots: {json.dumps(time_location_data.get('timeSlots', []))}
-    Locations: {json.dumps(time_location_data.get('locations', []))}
-    Data points: {json.dumps(time_location_data.get('dataPoints', [])[:10])}
+TIME-LOCATION EFFICIENCY MAP (avg. efficiency per time slot and location):
+{json.dumps(time_location_map)}
 
-    Please provide PRECISE recommendations on:
-    1. OPTIMAL STUDY LOCATION & TIME: Based on efficiency data, identify the exact location and time period where the student performs best. Be specific (e.g., "Library during Afternoon shows 4.7/5 efficiency").
+Please provide PRECISE recommendations on:
+1. OPTIMAL STUDY LOCATION & TIME: Based on efficiency data, identify the exact location and time period where the student performs best.
+2. SUBJECT BALANCE: Identify which subjects receive too little study time. Suggest specific time redistributions.
+3. LOCATION OPTIMIZATION: Recommend location changes for specific subjects.
+4. TIME SLOT UTILIZATION: Suggest how to use the most productive time slots for hard subjects.
 
-    2. SUBJECT BALANCE: Identify which subjects receive too little study time compared to their importance. Suggest specific time redistributions (e.g., "Increase Physics from 120 to 180 minutes weekly").
+For each recommendation, provide:
+- a concise title (3-5 words)
+- a clear explanation (2-3 sentences)
+- a Font Awesome icon (choose from: fa-clock, fa-map-marker-alt, fa-book, fa-calendar-check, fa-lightbulb, fa-brain, fa-balance-scale)
 
-    3. LOCATION OPTIMIZATION: Recommend specific location changes for particular subjects based on efficiency patterns (e.g., "Study Mathematics in the Library instead of Home").
-
-    4. TIME SLOT UTILIZATION: Suggest how to leverage their most productive time periods for challenging subjects (e.g., "Reserve Morning slots for calculus when your efficiency is highest").
-
-    For each recommendation, provide:
-    1. A concise, specific title (3-5 words)
-    2. A detailed explanation with concrete, actionable advice (2-3 sentences)
-    3. An appropriate Font Awesome icon from: fa-clock, fa-map-marker-alt, fa-book, fa-calendar-check, fa-lightbulb, fa-brain, fa-balance-scale
-
-    Format your response as a JSON array like:
-    [
-      {{
-        "title": "Study Physics at Library",
-        "description": "Your efficiency for Physics increases to 4.8/5 when studying at the Library. Schedule your most challenging Physics topics during Afternoon sessions at this location.",
-        "icon": "fa-map-marker-alt"
-      }}
-    ]
-
-    Ensure your response is valid JSON and nothing else.
+Respond ONLY with a valid JSON array, like:
+[
+  {{
+    "title": "Study Physics at Library",
+    "description": "Your efficiency for Physics increases to 4.8/5 at the Library. Schedule your most challenging topics during Afternoon sessions there.",
+    "icon": "fa-map-marker-alt"
+  }}
+]
 """
-        
-        # Gemini API URL
+
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
-        
-        # Call Gemini API
+
         response = requests.post(
             url,
             json={
@@ -887,126 +819,46 @@ def ai_recommendations():
             },
             timeout=15
         )
-        
-        # Process response
+
         if response.status_code != 200:
             print(f"Gemini API error: {response.status_code}, {response.text}")
-            return jsonify({"recommendations": generate_fallback_recommendations(subject_distribution, time_location_data.get('dataPoints', []))})
-            
+            return jsonify({"recommendations": generate_fallback_recommendations(subject_distribution, time_location_map)})
+
         response_data = response.json()
-        
-        # Ensure response format is correct
         if 'candidates' not in response_data or not response_data['candidates']:
             print("Gemini API returned no candidates")
-            return jsonify({"recommendations": generate_fallback_recommendations(subject_distribution, time_location_data.get('dataPoints', []))})
-            
+            return jsonify({"recommendations": generate_fallback_recommendations(subject_distribution, time_location_map)})
+
         response_text = response_data['candidates'][0]['content']['parts'][0]['text']
-        
-        # Extract JSON part
+
+        # Try extracting JSON from Gemini response
         import re
         json_match = re.search(r'\[[\s\S]*\]', response_text)
         if json_match:
             try:
                 recommendations = json.loads(json_match.group())
-                if recommendations and isinstance(recommendations, list):
-                    # Validate each recommendation format
-                    validated_recommendations = []
+                if isinstance(recommendations, list):
+                    validated = []
                     for rec in recommendations:
                         if isinstance(rec, dict) and 'title' in rec and 'description' in rec:
-                            validated_rec = {
+                            validated.append({
                                 "title": rec.get("title", "Study Tip"),
                                 "description": rec.get("description", "Continue maintaining good study habits."),
                                 "icon": rec.get("icon", "fa-lightbulb")
-                            }
-                            validated_recommendations.append(validated_rec)
-                            return jsonify({"recommendations": validated_recommendations})
+                            })
+                    return jsonify({"recommendations": validated})
             except json.JSONDecodeError as e:
-                print(f"Failed to parse JSON from API response: {e}")
-        
-        # If unable to extract valid recommendations from the response, return fallback recommendations
-        return jsonify({"recommendations": generate_fallback_recommendations(subject_distribution, time_location_data.get('dataPoints', []))})
-            
+                print(f"JSON parse error: {e}")
+
+        # fallback if JSON parsing fails
+        return jsonify({"recommendations": generate_fallback_recommendations(subject_distribution, time_location_map)})
+
     except Exception as e:
         import traceback
         print(f"AI recommendations error: {str(e)}")
         print(traceback.format_exc())
-        # Exception handling, return fallback recommendations
-        return jsonify({"recommendations": generate_fallback_recommendations(subject_distribution, time_location_data.get('dataPoints', []))})
+        return jsonify({"recommendations": generate_fallback_recommendations(subject_distribution, time_location_map)})
 
-def generate_fallback_recommendations(subject_distribution, data_points):
-    """Generate fallback recommendations when API is unavailable or returns invalid data"""
-    recommendations = []
-    
-    # Add general study advice
-    recommendations.append({
-        "title": "Establish Study Routine",
-        "description": "Research shows that having regular study habits leads to better learning outcomes. Try to study at the same time each day, even if for shorter periods, as this is more effective than irregular longer sessions.",
-        "icon": "fa-calendar-check"
-    })
-    
-    # Add location advice
-    location_efficiency = {}
-    for point in data_points:
-        location = point.get('location')
-        if location:
-            if location not in location_efficiency:
-                location_efficiency[location] = {"total": 0, "count": 0}
-            location_efficiency[location]["total"] += point.get('efficiency', 0)
-            location_efficiency[location]["count"] += 1
-    
-    # Find highest efficiency location
-    best_location = None
-    best_avg = 0
-    for loc, data in location_efficiency.items():
-        if data["count"] >= 3:  # At least 3 data points
-            avg = data["total"] / data["count"]
-            if avg > best_avg:
-                best_avg = avg
-                best_location = loc
-    
-    if best_location:
-        recommendations.append({
-            "title": "Optimal Study Environment",
-            "description": f"Your study efficiency is highest at {best_location} (average rating: {best_avg:.1f}/5). Consider studying more frequently in this environment.",
-            "icon": "fa-map-marker-alt"
-        })
-    
-    # Add time management advice
-    time_efficiency = {}
-    for point in data_points:
-        time_slot = point.get('timeSlot')
-        if time_slot:
-            if time_slot not in time_efficiency:
-                time_efficiency[time_slot] = {"total": 0, "count": 0}
-            time_efficiency[time_slot]["total"] += point.get('efficiency', 0)
-            time_efficiency[time_slot]["count"] += 1
-    
-    # Find highest efficiency time slot
-    best_time = None
-    best_time_avg = 0
-    for time, data in time_efficiency.items():
-        if data["count"] >= 2:  # At least 2 data points
-            avg = data["total"] / data["count"]
-            if avg > best_time_avg:
-                best_time_avg = avg
-                best_time = time
-    
-    if best_time:
-        recommendations.append({
-            "title": "Optimal Study Time",
-            "description": f"Your study efficiency is highest during {best_time} (average rating: {best_time_avg:.1f}/5). Try to schedule important study tasks during this time period.",
-            "icon": "fa-clock"
-        })
-    
-    # Add subject balance advice
-    if len(subject_distribution) >= 2:
-        recommendations.append({
-            "title": "Balance Study Subjects",
-            "description": "When studying multiple subjects, use interleaving technique to improve efficiency. Try focusing on one subject for 25 minutes, take a short break, then switch to another subject. This approach keeps your brain active.",
-            "icon": "fa-balance-scale"
-        })
-    
-    return recommendations
 
 # Helper function for generating unique access codes for reports
 def generate_unique_access_code():
