@@ -5,10 +5,14 @@
  * CITS5505 Project
  */
 
+// Define global variables
+let timerRunning = false;
+let timerPaused = false;
+let timerInterval;
+let seconds = 0;
+
 // Wait for the DOM to be fully loaded
 document.addEventListener("DOMContentLoaded", function () {
-  console.log("StudyTime Tracker initialized");
-
   // Initialize components based on current page
   initCurrentPage();
 });
@@ -35,19 +39,16 @@ function initCurrentPage() {
  * Initialize home page components
  */
 function initHomePage() {
-  console.log("Home page initialized");
 
-  // Login form handling (placeholder)
-  const loginForm = document.getElementById("loginForm");
-  if (loginForm) {
-    loginForm.addEventListener("submit", function (e) {
-      e.preventDefault();
-      console.log("Login form submitted (demo only)");
-      // In the real implementation, this would handle authentication
-    });
-  }
-
-  // For the first presentation, we're not implementing actual functionality
+  // 移除原先的表单处理代码，因为我们现在使用Flask表单提交
+  // const loginForm = document.getElementById("loginForm");
+  // if (loginForm) {
+  //   loginForm.addEventListener("submit", function (e) {
+  //     e.preventDefault();
+  //   });
+  // }
+  
+  // 其他主页初始化代码...
 }
 
 /**
@@ -56,703 +57,878 @@ function initHomePage() {
 function initUploadPage() {
   console.log("Upload page initialized");
 
-  // Study timer elements (placeholders)
-  const startTimerBtn = document.getElementById("startTimer");
-  const pauseTimerBtn = document.getElementById("pauseTimer");
-  const resetTimerBtn = document.getElementById("resetTimer");
-  const timerDisplay = document.getElementById("timerDisplay");
+  // 定义全局计时器变量（改为局部变量，不影响外部定义的相同变量）
+  let timerInterval = null;
+  let seconds = 0;
+  let efficiency = 5;  // 默认效率为5（最高）
+  let timerRunning = false;
+  let timerPaused = false;
 
-  // Add event listeners to timer buttons (for future implementation)
-  if (startTimerBtn && pauseTimerBtn && resetTimerBtn) {
-    startTimerBtn.addEventListener("click", function () {
-      console.log("Timer would start here");
-      // In future: startTimer();
+  // 获取DOM元素
+  const startBtn = document.getElementById('startTimer');
+  const pauseBtn = document.getElementById('pauseTimer');
+  const resetBtn = document.getElementById('resetTimer');
+  const saveBtn = document.getElementById('saveSession');
+  const timerDisplay = document.getElementById('timerDisplay');
+  const efficiencyRating = document.getElementById('efficiencyRating');
+  const efficiencyStars = document.querySelectorAll('.efficiency-star');
+
+  if (startBtn && pauseBtn && resetBtn && saveBtn) {
+    console.log("Timer controls found, adding event listeners");
+
+    // 开始计时按钮
+    startBtn.addEventListener('click', function() {
+      if (!timerRunning) {
+        startTimer();
+      }
     });
 
-    pauseTimerBtn.addEventListener("click", function () {
-      console.log("Timer would pause here");
-      // In future: pauseTimer();
+    // 暂停按钮
+    pauseBtn.addEventListener('click', function() {
+      if (timerRunning) {
+        pauseTimer();
+      } else if (timerPaused) {
+        resumeTimer();
+      }
     });
 
-    resetTimerBtn.addEventListener("click", function () {
-      console.log("Timer would reset here");
-      // In future: resetTimer();
+    // 重置按钮
+    resetBtn.addEventListener('click', function() {
+      resetTimer();
     });
+
+    // 保存会话按钮
+    saveBtn.addEventListener('click', function() {
+      saveStudySession();
+    });
+    
+    // 添加效率星级评分事件监听
+    if (efficiencyStars) {
+      const ratingOptions = document.querySelectorAll('.rating-option');
+      
+      // 为每个评分选项添加事件监听
+      if (ratingOptions.length > 0) {
+        ratingOptions.forEach(option => {
+          const star = option.querySelector('.efficiency-star');
+          if (star) {
+            const value = parseInt(star.getAttribute('data-value'));
+            
+            option.addEventListener('click', function() {
+              setEfficiencyRating(value);
+            });
+            
+            option.addEventListener('mouseover', function() {
+              highlightStars(value);
+            });
+            
+            option.addEventListener('mouseout', function() {
+              highlightStars(efficiency);
+            });
+          }
+        });
+      } else {
+        // 如果没有找到评分选项容器，则使用星星元素
+        efficiencyStars.forEach(star => {
+          star.addEventListener('click', function() {
+            const value = parseInt(this.getAttribute('data-value'));
+            setEfficiencyRating(value);
+          });
+          
+          star.addEventListener('mouseover', function() {
+            const value = parseInt(this.getAttribute('data-value'));
+            highlightStars(value);
+          });
+          
+          star.addEventListener('mouseout', function() {
+            highlightStars(efficiency);
+          });
+        });
+      }
+    }
+  } else {
+    console.warn("Timer controls not found on this page");
   }
 
-  // Interruption tracking (placeholder)
-  const recordInterruptionBtn = document.getElementById("recordInterruption");
-  if (recordInterruptionBtn) {
-    recordInterruptionBtn.addEventListener("click", function () {
-      console.log("Interruption would be recorded here");
-      // In future: recordInterruption();
+  // 补零函数
+  function padNumber(num) {
+    return String(num).padStart(2, '0');
+  }
+  
+  // 开始计时
+  function startTimer() {
+    console.log("Starting timer");
+    timerRunning = true;
+    timerPaused = false;
+
+    if (startBtn) startBtn.disabled = true;
+    if (pauseBtn) {
+      pauseBtn.disabled = false;
+      pauseBtn.innerHTML = '<i class="fas fa-pause me-2"></i>Pause';
+    }
+    if (resetBtn) resetBtn.disabled = false;
+    if (saveBtn) saveBtn.disabled = false;
+    
+    // 隐藏效率评分（只有在暂停或保存前才显示）
+    if (efficiencyRating) efficiencyRating.style.display = 'none';
+
+    // 开始计时
+    timerInterval = setInterval(updateTimer, 1000);
+  }
+
+  // 暂停计时
+  function pauseTimer() {
+    console.log("Pausing timer");
+    timerRunning = false;
+    timerPaused = true;
+
+    if (pauseBtn) {
+      pauseBtn.innerHTML = '<i class="fas fa-play me-2"></i>Resume';
+    }
+    
+    // 显示效率评分
+    if (efficiencyRating) efficiencyRating.style.display = 'block';
+    
+    // 突出显示当前效率评分
+    highlightStars(efficiency);
+
+    clearInterval(timerInterval);
+  }
+
+  // 恢复计时
+  function resumeTimer() {
+    console.log("Resuming timer");
+    timerRunning = true;
+    timerPaused = false;
+
+    if (pauseBtn) {
+      pauseBtn.innerHTML = '<i class="fas fa-pause me-2"></i>Pause';
+    }
+    
+    // 隐藏效率评分
+    if (efficiencyRating) efficiencyRating.style.display = 'none';
+
+    // 继续计时
+    timerInterval = setInterval(updateTimer, 1000);
+  }
+
+  // 重置计时器
+  function resetTimer() {
+    console.log("Resetting timer");
+    timerRunning = false;
+    timerPaused = false;
+    seconds = 0;
+    efficiency = 5;  // 重置效率为默认值
+
+    // 清除计时器
+    clearInterval(timerInterval);
+
+    // 重置UI元素
+    if (timerDisplay) timerDisplay.textContent = "00:00:00";
+    if (startBtn) startBtn.disabled = false;
+    if (pauseBtn) {
+      pauseBtn.disabled = true;
+      pauseBtn.innerHTML = '<i class="fas fa-pause me-2"></i>Pause';
+    }
+    if (resetBtn) resetBtn.disabled = true;
+    if (saveBtn) saveBtn.disabled = true;
+    
+    // 隐藏效率评分
+    if (efficiencyRating) efficiencyRating.style.display = 'none';
+    
+    // 重置星星显示
+    highlightStars(0);
+  }
+
+  // 更新计时器显示
+  function updateTimer() {
+    seconds++;
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    if (timerDisplay) {
+      timerDisplay.textContent = `${padNumber(hours)}:${padNumber(minutes)}:${padNumber(secs)}`;
+    }
+  }
+  
+  // 设置效率评分
+  function setEfficiencyRating(value) {
+    console.log(`Setting efficiency rating to ${value}`);
+    efficiency = value;
+    highlightStars(value);
+    
+    // 显示通知信息
+    const ratingLabels = ["", "Poor", "Below Average", "Average", "Good", "Excellent"];
+    if (value >= 1 && value <= 5) {
+      showNotification('Efficiency Rating', `Set to: ${ratingLabels[value]}`, 'info');
+    }
+  }
+  
+  // 高亮星星
+  function highlightStars(count) {
+    if (efficiencyStars) {
+      const ratingOptions = document.querySelectorAll('.rating-option');
+      
+      ratingOptions.forEach(option => {
+        const star = option.querySelector('.efficiency-star');
+        if (star) {
+          const starValue = parseInt(star.getAttribute('data-value'));
+          const label = option.querySelector('.rating-label');
+          
+          if (starValue <= count) {
+            star.classList.remove('far');
+            star.classList.add('fas');
+            star.classList.add('text-warning');
+            option.style.fontWeight = 'bold';
+            if (label) label.style.color = '#495057';
+          } else {
+            star.classList.remove('fas');
+            star.classList.remove('text-warning');
+            star.classList.add('far');
+            option.style.fontWeight = 'normal';
+            if (label) label.style.color = '#6c757d';
+          }
+          
+          // 为当前选中的评分添加特殊样式
+          if (starValue === count) {
+            option.style.transform = 'scale(1.05)';
+            option.style.backgroundColor = 'rgba(255, 152, 0, 0.1)';
+          } else {
+            option.style.transform = 'scale(1)';
+            option.style.backgroundColor = 'transparent';
+          }
+        }
+      });
+    }
+  }
+
+  // 保存学习会话
+  function saveStudySession() {
+    // 防止重复提交
+    if (saveBtn.disabled) {
+      console.log("Already saving, ignoring duplicate submit");
+      return;
+    }
+    
+    const subjectSelect = document.getElementById('subjectSelect');
+    const locationInput = document.getElementById('location');
+    const timerDisplay = document.getElementById('timerDisplay');
+
+    // 表单验证
+    if (!subjectSelect || !locationInput) {
+      console.error("Required form elements not found");
+      showNotification('Error', 'Form elements not found', 'danger');
+      return;
+    }
+
+    if (!subjectSelect.value || subjectSelect.value === 'Select a subject' || subjectSelect.value === 'add') {
+      showNotification('Error', 'Please select a valid subject', 'danger');
+      return;
+    }
+
+    if (!locationInput.value.trim()) {
+      showNotification('Error', 'Please enter a study location', 'danger');
+      return;
+    }
+
+    // 检查是否有计时数据
+    if (seconds <= 0) {
+      showNotification('Error', 'You need to study for at least a few seconds', 'danger');
+      return;
+    }
+
+    // 计算学习时长
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const duration = `${hours}h ${minutes}m`;
+
+    console.log(`Saving session: ${subjectSelect.value} at ${locationInput.value} for ${duration} with efficiency ${efficiency}`);
+
+    // 准备数据对象
+    const data = {
+      subject_id: subjectSelect.value,
+      location: locationInput.value,
+      duration: duration,
+      efficiency: efficiency,
+      notes: document.querySelector('textarea')?.value || ""
+    };
+
+    // 获取CSRF令牌
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+    // 显示加载状态
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving...';
+
+    // 发送AJAX请求
+    fetch('/upload', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken
+      },
+      body: JSON.stringify(data)
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Success:', data);
+      
+      // 恢复按钮状态
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>Save Session';
+      
+      // 显示成功通知
+      showNotification('Success', 'Study session saved successfully!', 'success');
+      
+      // 重置计时器
+      resetTimer();
+      
+      // 添加动画效果
+      const timerContainer = document.querySelector('.timer-container');
+      if (timerContainer) {
+        timerContainer.classList.add('border', 'border-success');
+        setTimeout(() => {
+          timerContainer.classList.remove('border', 'border-success');
+        }, 1500);
+      }
+      
+      // 重新加载页面以显示新记录
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      
+      // 恢复按钮状态
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>Save Session';
+      
+      // 显示错误通知
+      showNotification('Error', `Failed to save study session: ${error.message}`, 'danger');
     });
   }
 }
+
+// 显示通知消息
+function showNotification(title, message, type = 'info') {
+  // 检查是否已存在通知容器，没有则创建
+  let toastContainer = document.querySelector('.toast-container');
+  if (!toastContainer) {
+    toastContainer = document.createElement('div');
+    toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+    document.body.appendChild(toastContainer);
+  }
+  
+  // 创建通知元素
+  const toastId = `toast-${Date.now()}`;
+  const toastEl = document.createElement('div');
+  toastEl.className = `toast show border-0`;
+  toastEl.id = toastId;
+  
+  // 设置背景颜色
+  let bgColor = 'bg-info';
+  if (type === 'success') bgColor = 'bg-success';
+  if (type === 'danger') bgColor = 'bg-danger';
+  if (type === 'warning') bgColor = 'bg-warning';
+  
+  // 设置图标
+  let icon = 'info-circle';
+  if (type === 'success') icon = 'check-circle';
+  if (type === 'danger') icon = 'exclamation-circle';
+  if (type === 'warning') icon = 'exclamation-triangle';
+  
+  // 创建通知内容
+  toastEl.innerHTML = `
+    <div class="toast-header ${bgColor} text-white">
+      <i class="fas fa-${icon} me-2"></i>
+      <strong class="me-auto">${title}</strong>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body">
+      ${message}
+    </div>
+  `;
+  
+  // 添加到通知容器
+  toastContainer.appendChild(toastEl);
+  
+  // 注册关闭事件
+  const closeBtn = toastEl.querySelector('.btn-close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      toastEl.remove();
+    });
+  }
+  
+  // 自动关闭（3秒后）
+  setTimeout(() => {
+    if (toastEl.parentNode) {
+      toastEl.remove();
+    }
+  }, 3000);
+}
+
+// 添加通知样式
+function addNotificationStyles() {
+  // 添加通知的样式
+  const styleEl = document.createElement('style');
+  styleEl.innerHTML = `
+    .toast-container {
+      z-index: 1060;
+    }
+    .toast {
+      min-width: 250px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      border-radius: var(--border-radius);
+      overflow: hidden;
+    }
+  `;
+  document.head.appendChild(styleEl);
+}
+
+// 页面加载时添加通知样式
+document.addEventListener('DOMContentLoaded', function() {
+  addNotificationStyles();
+  // 其他初始化代码...
+});
+
+
+
 
 /**
  * Initialize visualization page components
  */
 function initVisualizePage() {
-  console.log("Visualize page initialized");
-
-  const applyButton = document.getElementById("filterApply");
-  if (applyButton) {
-    applyButton.addEventListener("click", async function () {
-      const dateFrom = document.getElementById("dateFrom").value;
-      const dateTo = document.getElementById("dateTo").value;
-
+  
+  // 设置默认日期范围（过去30天）
+  const today = new Date();
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setDate(today.getDate() - 30);
+  
+  const dateFromInput = document.getElementById("dateFrom");
+  const dateToInput = document.getElementById("dateTo");
+  const filterApplyBtn = document.getElementById("filterApply");
+  
+  if (dateFromInput && dateToInput) {
+    // 设置默认日期
+    dateFromInput.value = oneMonthAgo.toISOString().split("T")[0];
+    dateToInput.value = today.toISOString().split("T")[0];
+    
+    // 页面加载时自动获取初始数据
+    fetchAndUpdateAnalytics(dateFromInput.value, dateToInput.value);
+  }
+  
+  // 应用筛选按钮事件监听
+  if (filterApplyBtn) {
+    filterApplyBtn.addEventListener("click", function() {
+      const dateFrom = dateFromInput.value;
+      const dateTo = dateToInput.value;
+      
+      // 添加加载状态
+      /*
+      document.querySelectorAll(".chart-placeholder").forEach(el => {
+        el.innerHTML = '<div class="d-flex justify-content-center align-items-center h-100"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+      }); */
+      
+      // 获取并更新数据
+      fetchAndUpdateAnalytics(dateFrom, dateTo);
+    });
+  }
+  
+  // AI推荐按钮事件监听
+  const aiRecommendBtn = document.getElementById("getAiRecommendations");
+  if (aiRecommendBtn) {
+    // 先移除所有现有的点击事件处理程序，防止重复绑定
+    aiRecommendBtn.replaceWith(aiRecommendBtn.cloneNode(true));
+    
+    // 重新获取按钮（因为cloneNode会删除所有事件监听器）
+    const newAiRecommendBtn = document.getElementById("getAiRecommendations");
+    
+    // 添加新的事件处理程序
+    newAiRecommendBtn.addEventListener("click", async function() {
+      // 获取当前筛选条件
+      const dateFrom = dateFromInput.value;
+      const dateTo = dateToInput.value;
+      
       if (!dateFrom || !dateTo) {
-        alert("Please select both start and end dates.");
+        showNotification('Error', 'Please select a date range and apply filters first to load your study data.', 'danger');
         return;
       }
-
-      try {
-        const sessions = await fetchFilteredData(dateFrom, dateTo);
-        drawSubjectPieChart(sessions);
-        // 🚧 未来这里也可以加其他图表的绘制函数，比如 drawEfficiencyBarChart(sessions);
-        drawSummaryCards(sessions);// 这个函数用于绘制汇总卡片
-        drawStudyBarChart(sessions);  // 这个函数用于绘制柱状图，显示每天的学习时间
-        drawEfficiencyTimeChart(sessions);// 这个函数用于绘制柱状图，显示一天内各时间段的平均效率
-        drawLocationEfficiencyChart(sessions);// 这个函数用于绘制柱状图，显示各地点的平均效率
-        drawTimeLocation3DChart(sessions); // 这个函数用于绘制3D散点图，显示各时间段和地点的效率
-
-
-
-
-      } catch (error) {
-        console.error("Error processing filtered data:", error);
-      }
-      // 在 initVisualizePage 函数末尾的 catch 块之后、函数结束前添加
-
-  // 添加 AI 推荐按钮事件处理
-  const aiRecommendButton = document.getElementById("getAiRecommendations");
-  if (aiRecommendButton) {
-    aiRecommendButton.addEventListener("click", async function() {
-      // 获取当前过滤出的会话数据
-      const dateFrom = document.getElementById("dateFrom").value;
-      const dateTo = document.getElementById("dateTo").value;
-
-      if (!dateFrom || !dateTo) {
-        alert("Please select a date range and apply filters first to load your study data.");
-        return;
-      }
-
+      
       try {
         // 显示加载指示器
         document.getElementById("aiRecommendationsContent").classList.add("d-none");
         document.getElementById("aiLoadingIndicator").classList.remove("d-none");
         
         // 获取数据并生成AI推荐
-        const sessions = await fetchFilteredData(dateFrom, dateTo);
+        const sessions = window.filteredSessionsForAI || [];
+        if (!sessions || sessions.length === 0) {
+          document.getElementById("aiLoadingIndicator").classList.add("d-none");
+          document.getElementById("aiRecommendationsContent").classList.remove("d-none");
+          document.getElementById("aiRecommendationsContent").innerHTML = `
+            <div class="text-center py-4">
+              <i class="fas fa-info-circle fa-3x text-warning mb-3"></i>
+              <p class="text-muted">No study data available for analysis.</p>
+              <small class="text-muted">Please select a date range with recorded study sessions.</small>
+            </div>
+          `;
+          return;
+        }
+        
+        // 获取AI推荐结果
         const result = await getAIRecommendations(sessions);
         
         // 隐藏加载指示器
         document.getElementById("aiLoadingIndicator").classList.add("d-none");
         document.getElementById("aiRecommendationsContent").classList.remove("d-none");
         
-        if (result.success) {
-          displayAIRecommendations(result.recommendations);
-        } else {
-          // 显示错误信息
+        // 显示推荐结果
+        if (result.success === false) {
           document.getElementById("aiRecommendationsContent").innerHTML = `
-            <div class="alert alert-warning" role="alert">
-              <i class="fas fa-exclamation-triangle me-2"></i> ${result.message}
+            <div class="alert alert-warning">
+              <i class="fas fa-exclamation-circle me-2"></i>
+              ${result.message || "Couldn't generate recommendations at this time."}
             </div>
           `;
+        } else {
+          // 使用打字效果显示推荐内容
+          displayAIRecommendations(result.recommendations);
         }
       } catch (error) {
-        console.error("Error getting AI recommendations:", error);
+        console.error('Error generating AI recommendations:', error);
         document.getElementById("aiLoadingIndicator").classList.add("d-none");
         document.getElementById("aiRecommendationsContent").classList.remove("d-none");
         document.getElementById("aiRecommendationsContent").innerHTML = `
-          <div class="alert alert-danger" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i> Failed to get recommendations. Please try again later.
+          <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Failed to load AI recommendations: ${error.message || "Unknown error"}
           </div>
         `;
       }
     });
   }
+  
+  // 数据导出功能
+  const exportDataBtn = document.querySelector('.btn-outline-primary');
+  if (exportDataBtn) {
+    exportDataBtn.addEventListener('click', function() {
+      exportStudyData();
     });
   }
-}//发送请求到后端，获取指定日期范围内的学习会话数据
+}
 
+// 获取CSRF令牌
+function getCSRFToken() {
+  const tokenElement = document.querySelector('input[name="csrf_token"]');
+  return tokenElement ? tokenElement.value : '';
+}
 
+// 获取数据并更新所有图表
+function fetchAndUpdateAnalytics(dateFrom, dateTo) {
+  // 1. 显示通用加载状态 (作用于所有 .chart-placeholder)
+ /* document.querySelectorAll(".chart-placeholder").forEach(el => {
+    el.innerHTML = `
+      <div class="d-flex justify-content-center align-items-center h-100">
+        <div class="text-center">
+          <div class="spinner-border text-primary mb-3" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="text-muted">Loading data...</p>
+        </div>
+      </div>
+    `;
+  });*/
+  
+  // (获取 totalStudyTimeEl 等元素的代码可以保留，如果将来 main.js 需要直接操作它们)
+  // const totalStudyTimeEl = document.getElementById("totalStudyTime");
+  // ...
+
+  fetch('/api/analytics-data', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCSRFToken() // 确保 getCSRFToken 已定义
+    },
+    body: JSON.stringify({ dateFrom, dateTo })
+  })
+  .then(response => {
+    if (!response.ok) throw new Error('Network response was not ok');
+    return response.json();
+  })
+  .then(data => {
+    console.log('API response data:', data);
+    
+    if (data.sessions && data.sessions.length > 0) {
+      // 数据有效，直接调用更新函数
+      updateStatsCards(data.sessions);
+      updateStudyBarChart(data.sessions); // 直接调用
+      updateSubjectPieChart(data.sessions); // 如果实现，也直接调用
+      updateEfficiencyTimeChart(data.sessions);
+      updateLocationEfficiencyChart(data.sessions);
+      updateTimeLocation3DChart(data.sessions);
+      window.filteredSessionsForAI = data.sessions; // 将数据存储在全局变量中，以便后续AI推荐使用
+      // ... 其他图表函数
+      
+      if (typeof updateDataTable === 'function') {
+        updateDataTable(data.sessions);
+      }
+    } else {
+      // 无数据情况
+      updateStatsCards([]); // 更新统计卡片为无数据状态 ("--")
+      updateStudyBarChart([]); // 更新条形图为无数据状态 (charts.js中应处理此情况)
+      updateSubjectPieChart([]);
+      updateEfficiencyTimeChart([]);
+      updateLocationEfficiencyChart([]);
+      updateTimeLocation3DChart([]);
+      // ...
+
+      // 对于没有被特定图表更新函数处理的 .chart-placeholder，可以设置通用无数据提示
+      
+      /*document.querySelectorAll(".chart-placeholder").forEach(el => {
+        // 不再检查特定ID
+        el.innerHTML = `...`;
+      }); */
+      if (typeof updateDataTable === 'function') {
+        updateDataTable([]);
+      }
+    }
+  })
+  .catch(error => {
+    console.error('Error fetching analytics data:', error);
+    
+    updateStatsCards([]); // 更新统计卡片为错误状态 ("--")
+    updateStudyBarChart([]); // 更新条形图为错误状态
+    // updateSubjectPieChart([]);
+    // ...
+
+  
+    if (typeof updateDataTable === 'function') {
+        updateDataTable([]);
+    }
+  });
+}
 
 
 /**
  * Initialize share page components
  */
 function initSharePage() {
-  console.log("Share page initialized");
 
   // Modal functionality is handled by Bootstrap
   // In the future, this would handle report creation and sharing
 }
 
-// Placeholder functions for study timer (to be implemented later)
-let timerInterval;
-let seconds = 0;
+// =================================================================
+// 图表相关函数
+// =================================================================
 
-function startTimer() {
-  // Timer logic will be implemented here
-}
-
-function pauseTimer() {
-  // Pause functionality will be implemented here
-}
-
-function resetTimer() {
-  // Reset functionality will be implemented here
-}
-
-function formatTime(totalSeconds) {
-  // Format seconds into HH:MM:SS
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  return [hours, minutes, seconds].map((v) => (v < 10 ? "0" + v : v)).join(":");
-}
-
-/**
- * Future data handling functions
- * These are placeholders for the actual implementation that will come later
- */
-function saveStudySession(sessionData) {
-  // This will save study session data to the backend
-  console.log("Would save study session:", sessionData);
-}
-
-function loadStudySessions() {
-  // This will load study sessions from the backend
-  console.log("Would load study sessions");
-  return []; // Placeholder
-}
-
-function createShareableReport(reportData) {
-  // This will create a shareable report
-  console.log("Would create report:", reportData);
-  return { id: "demo-report-id" }; // Placeholder
-}
-
-async function fetchFilteredData(dateFrom, dateTo) {
-  const response = await fetch("/api/analytics-data", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      date_from: dateFrom,
-      date_to: dateTo,
-    }),
+// 处理日期格式化
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric'
   });
-
-  const data = await response.json();  //接收后端返回的数据
-  console.log("Filtered session data:", data.sessions);
-  return data.sessions;
-}// 这个函数用于发送请求到后端，获取指定日期范围内的学习会话数据
-
-function drawSubjectPieChart(sessions) {
-  const subjectTimeMap = {};
-  sessions.forEach((s) => {
-    const match = s.duration.match(/(\d+)h\s*(\d+)m/);
-    if (match) {
-      const hours = parseInt(match[1]);
-      const minutes = parseInt(match[2]);
-      const totalMinutes = hours * 60 + minutes;
-
-      if (subjectTimeMap[s.subject]) {
-        subjectTimeMap[s.subject] += totalMinutes;
-      } else {
-        subjectTimeMap[s.subject] = totalMinutes;
-      }
-    }
-  });
-
-  const labels = Object.keys(subjectTimeMap);
-  const values = Object.values(subjectTimeMap);
-
-  const pieCanvas = document.getElementById("subjectPieChart");
-  if (pieCanvas) {
-    if (window.subjectChart) {
-      window.subjectChart.destroy();
-    }
-
-    window.subjectChart = new Chart(pieCanvas, {
-      type: "pie",
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            data: values,
-            backgroundColor: [
-              "#FF6384", "#36A2EB", "#FFCE56", "#4BC0C0", "#9966FF", "#FF9F40",
-            ],
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: {
-            position: 'bottom',
-          },
-        },
-      },
-    });
-  }
-} // 这个函数用于绘制饼图，显示各科目学习时间的占比
+}
 
 
-function drawSummaryCards(sessions) {
-  if (!sessions.length) {
-    document.getElementById("totalStudyTime").innerText = "0";
-    document.getElementById("studyVariance").innerText = "0";
-    document.getElementById("avgEfficiency").innerText = "0/5";
-    document.getElementById("mostActiveDay").innerText = "--";
+
+
+
+
+
+
+
+
+
+
+
+// 更新AI推荐内容
+function updateAIRecommendations(recommendations) {
+  const container = document.getElementById('aiRecommendationsContent');
+  
+  // 完全重置容器内容和状态
+  container.scrollTop = 0;
+  container.innerHTML = '';
+  
+  // 如果没有推荐，显示提示信息
+  if (!recommendations || recommendations.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-4">
+        <i class="fas fa-info-circle fa-3x text-secondary mb-3"></i>
+        <p class="text-muted">没有足够的数据生成推荐。</p>
+        <small class="text-muted">多学习一段时间后再来查看！</small>
+      </div>
+    `;
     return;
   }
-
-  // 1. 计算总时长
-  let totalMinutes = 0;
-  const dailyTotals = {};
-  let totalEfficiency = 0;
-
-  sessions.forEach((s) => {
-    const match = s.duration.match(/(\d+)h\s*(\d+)m/); // 正则表达式提取小时和分钟
-    if (match) {
-      const mins = parseInt(match[1]) * 60 + parseInt(match[2]); //把时分转换为分钟
-      totalMinutes += mins; // 累加总时长
-
-      // 累加每天的学习时间
-      if (!dailyTotals[s.date]) dailyTotals[s.date] = 0;
-      dailyTotals[s.date] += mins;
-    }
-
-    totalEfficiency += s.efficiency;
-  });
-
-  // 2. 填入总时长
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  document.getElementById("totalStudyTime").innerText = `${hours}h ${minutes}m`; //填入html中的totalStudyTime元素
-
-  // 3. 计算方差
-  const values = Object.values(dailyTotals);
-  const avg = values.reduce((a, b) => a + b, 0) / values.length;
-  const variance = values.reduce((acc, val) => acc + (val - avg) ** 2, 0) / values.length;
-  document.getElementById("studyVariance").innerText = variance.toFixed(2);
-
-  // 4. 平均效率
-  const avgEfficiency = totalEfficiency / sessions.length;
-  document.getElementById("avgEfficiency").innerText = `${avgEfficiency.toFixed(1)}/5`;
-
-  // 5. 最活跃的一天
-  const mostActiveDate = Object.entries(dailyTotals).sort((a, b) => b[1] - a[1])[0][0];
-  document.getElementById("mostActiveDay").innerText = mostActiveDate;
-}
-
-
-function drawStudyBarChart(sessions) {
-  const dateMap = {};
-
-  sessions.forEach((s) => {
-    const match = s.duration.match(/(\d+)h\s*(\d+)m/);
-    if (match) {
-      const mins = parseInt(match[1]) * 60 + parseInt(match[2]);
-      if (dateMap[s.date]) {
-        dateMap[s.date] += mins;
-      } else {
-        dateMap[s.date] = mins;
-      }
-    }
-  });
-
-  const labels = Object.keys(dateMap).sort();
-  const values = labels.map(date => dateMap[date]);
-
-  const ctx = document.getElementById("studyBarChart");
-  if (ctx) {
-    if (window.studyChart) {
-      window.studyChart.destroy();
-    }
-
-    window.studyChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: 'Study Time (mins)',
-          data: values,
-          backgroundColor: '#36A2EB',
-        }]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          y: {
-            beginAtZero: true
-          }
-        }
-      }
-    });
-  }
-}
-// 这个函数用于绘制柱状图，显示每天的学习时间
-
-function drawEfficiencyTimeChart(sessions) {
-  const buckets = {
-    "Early Morning": [],
-    "Morning": [],
-    "Afternoon": [],
-    "Evening": [],
-    "Night": [],
-    "Late Night": []
-  };
-
-  sessions.forEach(s => {
-    const [hour, minute] = s.start_time.split(":").map(Number);
-    const totalMinutes = hour * 60 + minute;
-
-    if (totalMinutes >= 360 && totalMinutes < 600) {
-      buckets["Early Morning"].push(s.efficiency);
-    } else if (totalMinutes >= 600 && totalMinutes < 720) {
-      buckets["Morning"].push(s.efficiency);
-    } else if (totalMinutes >= 720 && totalMinutes < 960) {
-      buckets["Afternoon"].push(s.efficiency);
-    } else if (totalMinutes >= 960 && totalMinutes < 1140) {
-      buckets["Evening"].push(s.efficiency);
-    } else if (totalMinutes >= 1140 && totalMinutes < 1380) {
-      buckets["Night"].push(s.efficiency);
-    } else {
-      buckets["Late Night"].push(s.efficiency);
-    }
-  }); //这样处理是为了避免字符串比较带来的问题
-
-  const labels = Object.keys(buckets);
-  const averages = labels.map(slot => {
-    const values = buckets[slot];
-    if (values.length === 0) return 0;
-    const avg = values.reduce((a, b) => a + b, 0) / values.length;
-    return avg.toFixed(2);
-  });
-
-  const ctx = document.getElementById("efficiencyTimeChart");
-  if (ctx) {
-    if (window.efficiencyTimeChart instanceof Chart) {
-      window.efficiencyTimeChart.destroy();
-    }
-    
-
-    window.efficiencyTimeChart = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: labels,
-        datasets: [{
-          label: "Avg. Efficiency",
-          data: averages,
-          backgroundColor: "#36A2EB"
-        }]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          y: {
-            beginAtZero: true,
-            max: 5
-          }
-        }
-      }
-    });
-  }
-}
-// 这个函数用于绘制柱状图，显示各时间段的平均效率
-
-
-function drawLocationEfficiencyChart(sessions) {
-  const locationMap = {};
-
-  // 1. 分组收集效率值
-  sessions.forEach(s => {
-    const loc = s.location;
-    if (!locationMap[loc]) {
-      locationMap[loc] = [];
-    }
-    locationMap[loc].push(s.efficiency);
-  });
-
-  // 2. 计算平均值
-  const labels = Object.keys(locationMap);
-  const averages = labels.map(loc => {
-    const values = locationMap[loc];
-    const avg = values.reduce((a, b) => a + b, 0) / values.length;
-    return avg.toFixed(2);
-  });
-
-  // 3. 绘图
-  const ctx = document.getElementById("locationEfficiencyChart");
-  if (ctx) {
-    if (window.locationEfficiencyChart instanceof Chart) {
-      window.locationEfficiencyChart.destroy();
-    }
-
-    window.locationEfficiencyChart = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: labels,
-        datasets: [{
-          label: "Avg. Efficiency",
-          data: averages,
-          backgroundColor: "#4BC0C0"
-        }]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          y: {
-            beginAtZero: true,
-            max: 5
-          }
-        }
-      }
-    });
-  }
-}
-// 这个函数用于绘制柱状图，显示各地点的平均效率
-
-function drawTimeLocation3DChart(sessions) {
-  const timeSlots = {
-    "Late Night": [0, 360],
-    "Early Morning": [360, 600],
-    "Morning": [600, 720],
-    "Afternoon": [720, 960],
-    "Evening": [960, 1140],
-    "Night": [1140, 1380]
-  };
-
-  const xLabels = Object.keys(timeSlots);
-  const yLabels = [...new Set(sessions.map(s => s.location))];
-
-  const x = [], y = [], z = [], colors = [];
-
-  sessions.forEach(s => {
-    const [hour, minute] = s.start_time.split(":").map(Number);
-    const totalMinutes = hour * 60 + minute;
-
-    let slot = xLabels.find(label => {
-      const [min, max] = timeSlots[label];
-      return totalMinutes >= min && totalMinutes < max;
-    });
-
-    if (!slot) return;
-
-    const xIdx = xLabels.indexOf(slot);
-    const yIdx = yLabels.indexOf(s.location);
-    const efficiency = s.efficiency;
-
-    x.push(xIdx);
-    y.push(yIdx);
-    z.push(efficiency);
-    colors.push(efficiency); // 颜色映射用
-  });
-
-  const trace = {
-    x: x,
-    y: y,
-    z: z,
-    type: 'scatter3d',
-    mode: 'markers',
-    marker: {
-      size: 8,
-      color: colors,
-      colorscale: 'RdYlGn',
-      cmin: 0,
-      cmax: 5,
-      opacity: 0.9,
-      line: {
-        width: 0.5,
-        color: 'rgba(0,0,0,0.1)'
-      }
-    },
-    text: z.map((v, i) => `${xLabels[x[i]]} @ ${yLabels[y[i]]}: ${v}`)
-  };
-
-  const layout = {
-    margin: { t: 50, l: 0, r: 0, b: 0 },
-    scene: {
-      xaxis: {
-        title: 'Time Slot',
-        tickvals: xLabels.map((_, i) => i),
-        ticktext: xLabels
-      },
-      yaxis: {
-        title: 'Location',
-        tickvals: yLabels.map((_, i) => i),
-        ticktext: yLabels
-      },
-      zaxis: {
-        title: 'Efficiency',
-        range: [0, 5]
-      }
-    }
-  };
-
-  Plotly.newPlot("timeLocationHeatmap", [trace], layout);
-}
-
-
-// 添加到文件末尾
-
-// 获取 AI 推荐
-async function getAIRecommendations(sessions) {
-  // 检查是否有会话数据
-  if (!sessions || sessions.length === 0) {
-    return {
-      success: false,
-      message: "No study data available. Please select a date range with study sessions first."
-    };
-  }
   
-  // 收集科目分布数据
-  const subjectDistribution = {};
-  sessions.forEach((s) => {
-    const match = s.duration.match(/(\d+)h\s*(\d+)m/);
-    if (match) {
-      const hours = parseInt(match[1]);
-      const minutes = parseInt(match[2]);
-      const totalMinutes = hours * 60 + minutes;
-
-      if (subjectDistribution[s.subject]) {
-        subjectDistribution[s.subject] += totalMinutes;
-      } else {
-        subjectDistribution[s.subject] = totalMinutes;
-      }
-    }
-  });
+  // 创建一个包含所有内容的容器
+  const mainContent = document.createElement('div');
   
-  // 收集时间-地点-效率数据
-  const timeSlots = {
-    "Late Night": [0, 360],
-    "Early Morning": [360, 600],
-    "Morning": [600, 720],
-    "Afternoon": [720, 960],
-    "Evening": [960, 1140],
-    "Night": [1140, 1380]
-  };
-
-  const xLabels = Object.keys(timeSlots);
-  const yLabels = [...new Set(sessions.map(s => s.location))];
-  const dataPoints = [];
-
-  sessions.forEach(s => {
-    const [hour, minute] = s.start_time.split(":").map(Number);
-    const totalMinutes = hour * 60 + minute;
-
-    let slot = xLabels.find(label => {
-      const [min, max] = timeSlots[label];
-      return totalMinutes >= min && totalMinutes < max;
-    });
-
-    if (!slot) return;
-
-    dataPoints.push({
-      timeSlot: slot,
-      location: s.location,
-      efficiency: s.efficiency
-    });
-  });
+  // 添加固定标题用于说明内容
+  const titleElem = document.createElement('div');
+  titleElem.className = 'mb-3';
+  titleElem.innerHTML = `<p>基于您的学习数据，以下是一些个性化推荐：</p>`;
+  mainContent.appendChild(titleElem);
   
-  try {
-    // 发送数据到后端 API
-    const response = await fetch("/api/ai-recommendations", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ 
-        subjectDistribution: subjectDistribution,
-        timeLocationData: {
-          timeSlots: xLabels,
-          locations: yLabels,
-          dataPoints: dataPoints
-        }
-      }),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Server responded with ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return {
-      success: true,
-      recommendations: data.recommendations
-    };
-  } catch (error) {
-    console.error("Error fetching AI recommendations:", error);
-    return {
-      success: false,
-      message: "Failed to get recommendations. Please try again later."
-    };
-  }
-}
-// 添加到文件末尾
-
-// 打字效果函数
-function typeWriter(element, text, speed = 30, index = 0) {
-  if (index < text.length) {
-    element.innerHTML += text.charAt(index);
-    index++;
-    setTimeout(() => typeWriter(element, text, speed, index), speed);
-  }
-}
-
-// 显示 AI 推荐结果，带打字效果
-function displayAIRecommendations(recommendations) {
-  const container = document.getElementById("aiRecommendationsContent");
-  container.innerHTML = ''; // 清空内容
-  
-  // 创建标题元素
-  const title = document.createElement('h6');
-  title.className = 'border-bottom pb-2 mb-3';
-  container.appendChild(title);
-  
-  // 创建列表容器
-  const list = document.createElement('ul');
-  list.className = 'list-group list-group-flush';
-  container.appendChild(list);
-  
-  // 使用打字效果展示标题
-  typeWriter(title, 'Based on your study data, here are some personalized recommendations:');
-  
-  // 依次添加每条建议，使用延迟和打字效果
+  // 构建推荐卡片
   recommendations.forEach((rec, index) => {
-    setTimeout(() => {
-      const item = document.createElement('li');
-      item.className = 'list-group-item bg-light bg-opacity-50 mb-2 rounded';
-      
-      const content = document.createElement('div');
-      content.className = 'd-flex';
-      
-      const iconDiv = document.createElement('div');
-      iconDiv.className = 'me-2';
-      iconDiv.innerHTML = `<i class="fas ${rec.icon} text-primary"></i>`;
-      
-      const textDiv = document.createElement('div');
-      textDiv.innerHTML = `<strong>${rec.title}</strong>`;
-      
-      const description = document.createElement('p');
-      description.className = 'mb-0 text-muted small';
-      textDiv.appendChild(description);
-      
-      content.appendChild(iconDiv);
-      content.appendChild(textDiv);
-      item.appendChild(content);
-      list.appendChild(item);
-      
-      // 使用打字效果展示描述文本
-      typeWriter(description, rec.description);
-    }, 1000 * (index + 1)); // 每条建议延迟显示
+    const cardEl = document.createElement('div');
+    cardEl.className = 'mb-3';
+    cardEl.innerHTML = `
+      <div class="card border-0 shadow-sm" id="rec-card-${index}">
+        <div class="card-body">
+          <div class="d-flex">
+            <div class="flex-shrink-0">
+              <i class="fas ${rec.icon} fa-2x text-primary"></i>
+            </div>
+            <div class="flex-grow-1 ms-3">
+              <h6 class="fw-bold mb-1">${rec.title}</h6>
+              <p class="mb-0">${rec.description}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    mainContent.appendChild(cardEl);
   });
+  
+  // 添加内容到容器
+  container.appendChild(mainContent);
+  
+  // 确保容器滚动到顶部
+  setTimeout(() => {
+    container.scrollTop = 0;
+  }, 10);
+}
+
+// 更新数据表格
+function updateDataTable(sessions) {
+  const dataTableContainer = document.querySelector('.data-table-container');
+  if (!dataTableContainer) return;
+  
+  // 按日期逆序排序
+  const sortedSessions = [...sessions].sort((a, b) => new Date(b.date) - new Date(a.date));
+  
+  // 生成表格HTML
+  let tableHtml = `
+    <div class="table-responsive">
+      <table class="table table-striped table-hover">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Subject</th>
+            <th>Time</th>
+            <th>Duration</th>
+            <th>Location</th>
+            <th>Efficiency</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+  
+  sortedSessions.forEach(session => {
+    // 星级HTML
+    let starsHtml = '';
+    for (let i = 1; i <= 5; i++) {
+      if (i <= session.efficiency) {
+        starsHtml += '<i class="fas fa-star text-warning"></i>';
+      } else {
+        starsHtml += '<i class="far fa-star text-warning"></i>';
+      }
+    }
+    
+    tableHtml += `
+      <tr>
+        <td>${formatDate(session.date)}</td>
+        <td>${session.subject}</td>
+        <td>${session.start_time} - ${session.end_time}</td>
+        <td>${session.duration}</td>
+        <td>${session.location}</td>
+        <td>${starsHtml}</td>
+      </tr>
+    `;
+  });
+  
+  tableHtml += `
+        </tbody>
+      </table>
+    </div>
+  `;
+  
+  dataTableContainer.innerHTML = tableHtml;
+}
+
+// 导出学习数据
+function exportStudyData() {
+  const dateFrom = document.getElementById("dateFrom").value;
+  const dateTo = document.getElementById("dateTo").value;
+  
+  fetch('/api/analytics-data', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCSRFToken()
+    },
+    body: JSON.stringify({ dateFrom, dateTo })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (!data.sessions || data.sessions.length === 0) {
+      showNotification('Export Failed', 'No data available to export', 'warning');
+      return;
+    }
+    
+    // 准备CSV数据
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Date,Subject,Start Time,End Time,Duration,Location,Efficiency,Notes\n";
+    
+    data.sessions.forEach(session => {
+      csvContent += `${session.date},${session.subject},${session.start_time},${session.end_time},${session.duration},"${session.location}",${session.efficiency},"${session.notes || ''}"\n`;
+    });
+    
+    // 创建下载链接
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `study_data_${dateFrom}_to_${dateTo}.csv`);
+    document.body.appendChild(link);
+    
+    // 触发下载
+    link.click();
+    
+    // 清理DOM
+    document.body.removeChild(link);
+    
+    showNotification('Export Success', 'Your study data has been exported to CSV', 'success');
+  })
+  .catch(error => {
+    console.error('Error exporting data:', error);
+    showNotification('Export Failed', 'Could not export data. Please try again.', 'danger');
+  });
+}
+
+// 获取随机颜色
+function getRandomColor() {
+  const colors = [
+    'rgba(255, 99, 132, 0.7)',
+    'rgba(54, 162, 235, 0.7)',
+    'rgba(255, 206, 86, 0.7)',
+    'rgba(75, 192, 192, 0.7)',
+    'rgba(153, 102, 255, 0.7)',
+    'rgba(255, 159, 64, 0.7)',
+    'rgba(199, 199, 199, 0.7)',
+    'rgba(83, 102, 255, 0.7)',
+    'rgba(40, 167, 69, 0.7)',
+    'rgba(220, 53, 69, 0.7)'
+  ];
+  
+  return colors[Math.floor(Math.random() * colors.length)];
 }
