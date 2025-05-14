@@ -64,7 +64,7 @@ class SubjectForm(FlaskForm):
 class ReportForm(FlaskForm):
     title = StringField('Report Title', validators=[DataRequired(), Length(max=100)])
     description = TextAreaField('Description')
-    
+
     # Using date_from and date_to field names to match template
     date_from = DateField('Start Date', format='%Y-%m-%d', validators=[DataRequired()])
     date_to = DateField('End Date', format='%Y-%m-%d', validators=[DataRequired()])
@@ -75,6 +75,7 @@ class ReportForm(FlaskForm):
         ('comment', 'View and Comment')
     ])
     expiry_date = DateField('Expiration Date (Optional)', format='%Y-%m-%d', validators=[])
+
     
     # Modified to be a multiple user select field
     share_with_users = SelectMultipleField('Share With Users', coerce=int)
@@ -88,6 +89,7 @@ class ReportForm(FlaskForm):
         user = kwargs.pop('user', None)
         super(ReportForm, self).__init__(*args, **kwargs)
         if user:
+
             self.subjects.choices = [(subject.name, subject.name) for subject in Subject.query.filter_by(user_id=user.id).all()]
             
             # Add choices for share_with_users - all users except the current user

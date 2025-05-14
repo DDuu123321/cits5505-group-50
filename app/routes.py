@@ -249,7 +249,11 @@ def share():
     
     # Format the data for template
     shared_reports = [report for report, _ in shared_reports_data]
-    
+
+    # This is based on reports the user has viewed with access codes
+    # In a more advanced implementation, this could use a SharedWith model to track shares
+    shared_reports = []
+
     # Get access error from query parameters (if present)
     access_error = request.args.get('access_error')
     
@@ -362,6 +366,7 @@ def edit_report(report_id):
     # Check ownership
     if report.owner_id != current_user.id:
         flash('You do not have permission to edit this report.', 'danger')
+
         return redirect(url_for('main.share'))
     
     # Initialize form with report data
@@ -454,6 +459,7 @@ def delete_report(report_id):
     
     try:
         # Delete the report (cascade will handle removing SharedWith entries)
+
         db.session.delete(report)
         db.session.commit()
         
@@ -503,7 +509,8 @@ def view_report(access_code):
     2. Checks if the report has expired
     3. Verifies the current user has permission to view the report
     4. Retrieves relevant study session data
-    5. Renders the report view template with visualization data
+    3. Retrieves relevant study session data
+    4. Renders the report view template
     """
     # Get the report
     report = Report.query.filter_by(access_code=access_code).first_or_404()
@@ -588,6 +595,7 @@ def view_report(access_code):
         })
     
     # Calculate averages and prepare chart data
+    # Calculate averages
     avg_efficiency = round(total_efficiency / len(sessions), 1) if sessions else 0
     
     # Calculate average efficiency by location
@@ -645,9 +653,9 @@ def profile():
     # Calculate total study time
     sessions = StudySession.query.filter_by(user_id=current_user.id).all()
     total_seconds = 0
-    total_study_time = 0  # 初始化为0，确保即使没有会话也有默认值
+    total_study_time = 0  
     
-    if sessions:  # 只有在有会话时才计算
+    if sessions:  
         for session in sessions:
             duration = datetime.combine(session.date, session.end_time) - datetime.combine(session.date, session.start_time)
             if duration.total_seconds() < 0:
@@ -695,14 +703,12 @@ def add_subject():
 def analytics_data():
     try:
         data = request.json or {}
-        # 使用安全的默认值，确保日期字符串不会是None
         default_from = '2000-01-01'
         default_to = datetime.now().strftime('%Y-%m-%d')
         
         date_from_str = data.get('dateFrom')
         date_to_str = data.get('dateTo')
         
-        # 确保dateFrom和dateTo是有效的日期字符串
         if not date_from_str or not isinstance(date_from_str, str):
             date_from_str = default_from
         if not date_to_str or not isinstance(date_to_str, str):
@@ -797,7 +803,6 @@ def analytics_data():
         })
     except Exception as e:
         print(f"Analytics data error: {str(e)}")
-        # 返回错误响应，但确保前端能够处理它
         return jsonify({
             'error': str(e),
             'sessions': [],

@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Share Study Data - StudyTime Tracker</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Font Awesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <!-- Custom CSS -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+      <div class="container">
+        <a class="navbar-brand" href="{{ url_for('main.index') }}">
+          <i class="fas fa-clock me-2"></i>StudyTime Tracker
+        </a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('main.index') }}">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('main.upload') }}"
+                >Record Time</a
+              >
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('main.visualize') }}"
+                >Analytics</a
+              >
+            </li>
+            <li class="nav-item">
+              <a class="nav-link active" href="{{ url_for('main.share') }}"
+                >Share</a
+              >
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Page Header -->
+    <header class="bg-light py-4">
+      <div class="container">
+        <h1>Share Your Study Data</h1>
+        <p class="lead">
+          Create and manage shared reports of your study analytics.
+        </p>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container py-5">
+      <div class="row">
+        <div class="col-lg-8">
+          <!-- Shared Reports Tab System -->
+          <ul class="nav nav-tabs" id="shareTab" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button
+                class="nav-link active"
+                id="myShares-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#myShares"
+                type="button"
+              >
+                <i class="fas fa-share-alt me-2"></i>My Shared Reports
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button
+                class="nav-link"
+                id="sharedWithMe-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#sharedWithMe"
+                type="button"
+              >
+                <i class="fas fa-user-friends me-2"></i>Shared With Me
+              </button>
+            </li>
+          </ul>
+
+          <div
+            class="tab-content p-4 border border-top-0 rounded-bottom"
+            id="shareTabContent"
+          >
+            <!-- My Shared Reports Tab -->
+            <div
+              class="tab-pane fade show active"
+              id="myShares"
+              role="tabpanel"
+            >
+              <div
+                class="d-flex justify-content-between align-items-center mb-4"
+              >
+                <h4 class="mb-0">Reports You've Shared</h4>
+                <a
+                  href="{{ url_for('main.create_report') }}"
+                  class="btn btn-primary"
+                >
+                  <i class="fas fa-plus me-2"></i>Create New Report
+                </a>
+              </div>
+
+              {% if my_reports %}
+              <div class="list-group">
+                {% for report in my_reports %}
+                <div class="list-group-item list-group-item-action">
+                  <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">{{ report.title }}</h5>
+                    <small>
+                      {% if report.expires_at %} Expires on {{
+                      report.expires_at.strftime('%Y-%m-%d') }} {% else %} No
+                      expiration {% endif %}
+                    </small>
+                  </div>
+                  <div class="d-flex w-100 justify-content-between">
+                    <p class="mb-1">{{ report.description }}</p>
+                    <div>
+                      <span class="badge bg-primary me-1"
+                        >Access code: {{ report.access_code }}</span
+                      >
+                    </div>
+                  </div>
+                  <div
+                    class="d-flex justify-content-between align-items-center mt-2"
+                  >
+                    <small class="text-muted"
+                      >Created on {{ report.created_at.strftime('%b %d, %Y')
+                      }}</small
+                    >
+                    <div>
+                      <a
+                        href="{{ url_for('main.view_report', access_code=report.access_code) }}"
+                        class="btn btn-sm btn-outline-primary me-1"
+                      >
+                        <i class="fas fa-eye me-1"></i>View
+                      </a>
+                      <a
+                        href="{{ url_for('main.edit_report', report_id=report.id) }}"
+                        class="btn btn-sm btn-outline-primary me-1"
+                      >
+                        <i class="fas fa-edit me-1"></i>Edit
+                      </a>
+                      <button
+                        class="btn btn-sm btn-outline-danger delete-report-btn"
+                        data-report-id="{{ report.id }}"
+                        data-report-title="{{ report.title }}"
+                      >
+                        <i class="fas fa-trash-alt me-1"></i>Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+              {% else %}
+              <div class="alert alert-info">
+                <p class="mb-0">
+                  You haven't created any reports yet.
+                  <a href="{{ url_for('main.create_report') }}"
+                    >Create your first report!</a
+                  >
+                </p>
+              </div>
+              {% endif %}
+            </div>
+
+            <!-- Shared With Me Tab -->
+            <div class="tab-pane fade" id="sharedWithMe" role="tabpanel">
+              <h4 class="mb-4">Reports Shared With You</h4>
+
+              {% if shared_reports %}
+              <div class="list-group">
+                {% for report in shared_reports %}
+                <div class="list-group-item list-group-item-action">
+                  <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">{{ report.title }}</h5>
+                    <small>From: {{ report.owner.username }}</small>
+                  </div>
+                  <p class="mb-1">{{ report.description }}</p>
+                  <div
+                    class="d-flex justify-content-between align-items-center mt-2"
+                  >
+                    <small class="text-muted"
+                      >Shared on {{ report.created_at.strftime('%b %d, %Y')
+                      }}</small
+                    >
+                    <a
+                      href="{{ url_for('main.view_report', access_code=report.access_code) }}"
+                      class="btn btn-sm btn-outline-primary"
+                    >
+                      <i class="fas fa-eye me-1"></i>View Report
+                    </a>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+              {% else %}
+              <div class="alert alert-info">
+                <p class="mb-0">No reports have been shared with you yet.</p>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4">
+          <!-- Quick Access Panel -->
+          <div class="card mb-4">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Quick Access</h5>
+            </div>
+            <div class="card-body">
+              <div class="d-grid gap-2">
+                <a
+                  href="{{ url_for('main.create_report') }}"
+                  class="btn btn-outline-primary"
+                >
+                  <i class="fas fa-plus-circle me-2"></i>Create New Report
+                </a>
+                <button class="btn btn-outline-secondary" disabled>
+                  <i class="fas fa-user-plus me-2"></i>Invite Study Partner
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Access Code Entry -->
+          <div class="card mb-4">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Access Shared Report</h5>
+            </div>
+            <div class="card-body">
+              <p>Enter a report access code shared with you:</p>
+              <form
+                action="{{ url_for('main.access_report') }}"
+                method="POST"
+                class="access-code-form"
+              >
+                <input
+                  type="hidden"
+                  name="csrf_token"
+                  value="{{ csrf_token() }}"
+                />
+                <div class="input-group mb-3">
+                  <input
+                    type="text"
+                    class="form-control"
+                    name="access_code"
+                    placeholder="Enter access code"
+                    required
+                  />
+                  <button class="btn btn-primary" type="submit">
+                    <i class="fas fa-arrow-right"></i>
+                  </button>
+                </div>
+                {% if access_error %}
+                <div class="alert alert-danger mt-2">{{ access_error }}</div>
+                {% endif %}
+              </form>
+            </div>
+          </div>
+
+          <!-- Tips and Privacy -->
+          <div class="card">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Sharing Tips & Privacy</h5>
+            </div>
+            <div class="card-body">
+              <ul class="list-group list-group-flush">
+                <li class="list-group-item">
+                  <i class="fas fa-lock text-primary me-2"></i>
+                  Your data is only shared with specific individuals you select
+                </li>
+                <li class="list-group-item">
+                  <i class="fas fa-calendar-alt text-primary me-2"></i>
+                  Set expiration dates for temporary sharing
+                </li>
+                <li class="list-group-item">
+                  <i class="fas fa-eye-slash text-primary me-2"></i>
+                  You can revoke access at any time
+                </li>
+                <li class="list-group-item">
+                  <i class="fas fa-sliders-h text-primary me-2"></i>
+                  Control which data points and subjects are shared
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Delete Report Confirmation Modal -->
+    <div
+      class="modal fade"
+      id="deleteReportModal"
+      tabindex="-1"
+      aria-labelledby="deleteReportModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="deleteReportModalLabel">
+              Confirm Delete
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p>
+              Are you sure you want to delete the report "<span
+                id="reportTitleToDelete"
+              ></span
+              >"?
+            </p>
+            <p class="text-danger">This action cannot be undone.</p>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <form id="deleteReportForm" action="" method="POST">
+              <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+              />
+              <button type="submit" class="btn btn-danger">
+                Delete Report
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-6">
+            <h5><i class="fas fa-clock me-2"></i>StudyTime Tracker</h5>
+            <p>Track, analyze, and optimize your study habits.</p>
+          </div>
+          <div class="col-md-3">
+            <h5>Links</h5>
+            <ul class="list-unstyled">
+              <li>
+                <a href="{{ url_for('main.index') }}" class="text-white"
+                  >Home</a
+                >
+              </li>
+              <li>
+                <a href="{{ url_for('main.upload') }}" class="text-white"
+                  >Record Time</a
+                >
+              </li>
+              <li>
+                <a href="{{ url_for('main.visualize') }}" class="text-white"
+                  >Analytics</a
+                >
+              </li>
+              <li>
+                <a href="{{ url_for('main.share') }}" class="text-white"
+                  >Share</a
+                >
+              </li>
+            </ul>
+          </div>
+          <div class="col-md-3">
+            <h5>Contact</h5>
+            <ul class="list-unstyled">
+              <li>24076678@student.uwa.edu.au</li>
+              <li>23951946@student.uwa.edu.au</li>
+              <li>24074639@student.uwa.edu.au</li>
+              <li>24318358@student.uwa.edu.au</li>
+              <li>University of Western Australia</li>
+            </ul>
+          </div>
+        </div>
+        <hr />
+        <div class="text-center">
+          <p>&copy; 2025 StudyTime Tracker - CITS5505 Project</p>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    <!-- Report Management Scripts -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // Set up delete report confirmation modal
+        const deleteModal = document.getElementById("deleteReportModal");
+        const reportTitleSpan = document.getElementById("reportTitleToDelete");
+        const deleteForm = document.getElementById("deleteReportForm");
+
+        // Add event listeners to all delete buttons
+        document.querySelectorAll(".delete-report-btn").forEach((button) => {
+          button.addEventListener("click", function () {
+            const reportId = this.getAttribute("data-report-id");
+            const reportTitle = this.getAttribute("data-report-title");
+
+            // Update modal content
+            reportTitleSpan.textContent = reportTitle;
+            deleteForm.action = `/delete_report/${reportId}`;
+
+            // Show modal
+            const bsModal = new bootstrap.Modal(deleteModal);
+            bsModal.show();
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
