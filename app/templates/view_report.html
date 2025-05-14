@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ report.title }} - StudyTime Tracker</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Font Awesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+      <div class="container">
+        <a class="navbar-brand" href="{{ url_for('main.index') }}">
+          <i class="fas fa-clock me-2"></i>StudyTime Tracker
+        </a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('main.index') }}">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('main.upload') }}"
+                >Record Time</a
+              >
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('main.visualize') }}"
+                >Analytics</a
+              >
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('main.share') }}">Share</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <header class="bg-light py-4">
+      <div class="container">
+        <h1>{{ report.title }}</h1>
+        <p class="lead">{{ report.description }}</p>
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="badge bg-primary p-2">
+            <i class="fas fa-calendar me-1"></i>
+            {{ report.start_date.strftime('%Y-%m-%d') }} to {{
+            report.end_date.strftime('%Y-%m-%d') }}
+          </span>
+          {% if report.expires_at %}
+          <span class="badge bg-warning p-2">
+            <i class="fas fa-clock me-1"></i>
+            Expires on {{ report.expires_at.strftime('%Y-%m-%d') }}
+          </span>
+          {% endif %}
+        </div>
+      </div>
+    </header>
+
+    <div class="container py-5">
+      <!-- Charts -->
+      <div class="row g-4 mb-4">
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Study Time by Subject</h5>
+            </div>
+            <div class="card-body">
+              <canvas id="subjectPieChart" height="300"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Daily Study Hours</h5>
+            </div>
+            <div class="card-body">
+              <canvas id="dailyLineChart" height="300"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-4 mb-4">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-header bg-light">
+              <h5 class="mb-0">Efficiency by Location</h5>
+            </div>
+            <div class="card-body">
+              <canvas id="locationBarChart" height="300"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Table -->
+      <div class="card mt-4">
+        <div
+          class="card-header bg-light d-flex justify-content-between align-items-center"
+        >
+          <h5 class="mb-0">Study Session Data</h5>
+          <button class="btn btn-sm btn-outline-primary" id="exportBtn">
+            <i class="fas fa-download me-1"></i>Export Data
+          </button>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Subject</th>
+                  <th>Duration</th>
+                  <th>Efficiency</th>
+                  <th>Location</th>
+                  <th>Interruptions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for s in sessions %}
+                <tr>
+                  <td>{{ s.date }}</td>
+                  <td>{{ s.subject }}</td>
+                  <td>{{ s.duration }}</td>
+                  <td>{{ s.efficiency }}/5</td>
+                  <td>{{ s.location }}</td>
+                  <td>{{ s.interruptions }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comments Section (if permission level is 'comment') -->
+      <div class="card mt-4">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">Comments</h5>
+        </div>
+        <div class="card-body">
+          {% if can_comment %}
+          <form>
+            <div class="mb-3">
+              <textarea
+                class="form-control"
+                rows="3"
+                placeholder="Add your comments or feedback..."
+              ></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Post Comment</button>
+          </form>
+
+          <hr />
+          {% endif %}
+
+          <div class="comments-container mt-4">
+            {% if comments %} {% for comment in comments %}
+            <div class="comment mb-3 p-3 bg-light rounded">
+              <div class="d-flex justify-content-between mb-2">
+                <div>
+                  <strong>{{ comment.user.username }}</strong>
+                </div>
+                <small class="text-muted"
+                  >{{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}</small
+                >
+              </div>
+              <p class="mb-0">{{ comment.content }}</p>
+            </div>
+            {% endfor %} {% else %}
+            <div class="alert alert-info">
+              No comments yet. {% if can_comment %}Be the first to leave
+              feedback!{% endif %}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-6">
+            <h5><i class="fas fa-clock me-2"></i>StudyTime Tracker</h5>
+            <p>Track, analyze, and optimize your study habits.</p>
+          </div>
+          <div class="col-md-3">
+            <h5>Links</h5>
+            <ul class="list-unstyled">
+              <li>
+                <a href="{{ url_for('main.index') }}" class="text-white"
+                  >Home</a
+                >
+              </li>
+              <li>
+                <a href="{{ url_for('main.upload') }}" class="text-white"
+                  >Record Time</a
+                >
+              </li>
+              <li>
+                <a href="{{ url_for('main.visualize') }}" class="text-white"
+                  >Analytics</a
+                >
+              </li>
+              <li>
+                <a href="{{ url_for('main.share') }}" class="text-white"
+                  >Share</a
+                >
+              </li>
+            </ul>
+          </div>
+          <div class="col-md-3">
+            <h5>Contact</h5>
+            <ul class="list-unstyled">
+              <li>24076678@student.uwa.edu.au</li>
+              <li>23951946@student.uwa.edu.au</li>
+              <li>24074639@student.uwa.edu.au</li>
+              <li>24318358@student.uwa.edu.au</li>
+              <li>University of Western Australia</li>
+            </ul>
+          </div>
+        </div>
+        <hr />
+        <div class="text-center">
+          <p>&copy; 2025 StudyTime Tracker - CITS5505 Project</p>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Chart Initialization Script -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+          // Process data for charts
+          const sessions = {{ sessions|tojson }};
+
+          // Subject Pie Chart
+          const subjectLabels = {{ chart_data.subject_time_labels|tojson }};
+          const subjectData = {{ chart_data.subject_time_values|tojson }};
+
+          // Generate colors for subjects
+          const colors = generateColors(subjectLabels.length);
+
+          const subjectPieCtx = document.getElementById('subjectPieChart').getContext('2d');
+          new Chart(subjectPieCtx, {
+              type: 'pie',
+              data: {
+                  labels: subjectLabels,
+                  datasets: [{
+                      data: subjectData.map(minutes => Math.round((minutes / 60) * 10) / 10), // Convert to hours
+                      backgroundColor: colors,
+                      hoverOffset: 4
+                  }]
+              },
+              options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                      legend: {
+                          position: 'bottom',
+                          labels: {
+                              padding: 15
+                          }
+                      },
+                      tooltip: {
+                          callbacks: {
+                              label: function(context) {
+                                  const value = context.raw;
+                                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                  const percentage = Math.round((value / total) * 100);
+                                  return `${context.label}: ${value} hours (${percentage}%)`;
+                              }
+                          }
+                      }
+                  }
+              }
+          });
+
+          // Daily Line Chart
+          const dateLabels = {{ chart_data.daily_labels|tojson }};
+          const dateData = {{ chart_data.daily_values|tojson }};
+
+          const dailyLineCtx = document.getElementById('dailyLineChart').getContext('2d');
+          new Chart(dailyLineCtx, {
+              type: 'line',
+              data: {
+                  labels: dateLabels,
+                  datasets: [{
+                      label: 'Study Hours',
+                      data: dateData,
+                      borderColor: '#4361ee',
+                      backgroundColor: 'rgba(67, 97, 238, 0.1)',
+                      tension: 0.1,
+                      fill: true
+                  }]
+              },
+              options: {
+                  responsive: true,
+                  scales: {
+                      y: {
+                          beginAtZero: true,
+                          title: {
+                              display: true,
+                              text: 'Hours'
+                          }
+                      },
+                      x: {
+                          title: {
+                              display: true,
+                              text: 'Date'
+                          }
+                      }
+                  }
+              }
+          });
+
+          // Location Bar Chart
+          const locationLabels = {{ chart_data.location_labels|tojson }};
+          const locationData = {{ chart_data.location_values|tojson }};
+
+          const locationBarCtx = document.getElementById('locationBarChart').getContext('2d');
+          new Chart(locationBarCtx, {
+              type: 'bar',
+              data: {
+                  labels: locationLabels,
+                  datasets: [{
+                      label: 'Average Efficiency',
+                      data: locationData,
+                      backgroundColor: colors.slice(0, locationLabels.length)
+                  }]
+              },
+              options: {
+                  responsive: true,
+                  scales: {
+                      y: {
+                          beginAtZero: true,
+                          max: 5,
+                          title: {
+                              display: true,
+                              text: 'Efficiency Rating (1-5)'
+                          }
+                      }
+                  }
+              }
+          });
+
+          // Export Data Button
+          document.getElementById('exportBtn').addEventListener('click', function() {
+              // Create CSV content
+              let csvContent = "data:text/csv;charset=utf-8,";
+              csvContent += "Date,Subject,Duration,Efficiency,Location,Interruptions\n";
+
+              sessions.forEach(function(s) {
+                  csvContent += `${s.date},${s.subject},${s.duration},${s.efficiency},${s.location},${s.interruptions}\n`;
+              });
+
+              // Create download link
+              const encodedUri = encodeURI(csvContent);
+              const link = document.createElement("a");
+              link.setAttribute("href", encodedUri);
+              link.setAttribute("download", "study_data_report.csv");
+              document.body.appendChild(link);
+
+              // Trigger download
+              link.click();
+
+              // Clean up
+              document.body.removeChild(link);
+          });
+
+          // Function to generate an array of colors
+          function generateColors(count) {
+              const colorSet = [
+                  '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                  '#9966FF', '#FF9F40', '#32CD32', '#BA55D3',
+                  '#20B2AA', '#FF6347', '#4682B4', '#D2691E'
+              ];
+
+              // If we need more colors than in our set, repeat them
+              let colors = [];
+              for (let i = 0; i < count; i++) {
+                  colors.push(colorSet[i % colorSet.length]);
+              }
+
+              return colors;
+          }
+      });
+    </script>
+  </body>
+</html>
