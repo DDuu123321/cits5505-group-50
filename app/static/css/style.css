@@ -182,6 +182,59 @@ body {
   color: var(--warning-color);
 }
 
+/* 效率评分样式 */
+.efficiency-rating {
+  margin-bottom: 1.5rem;
+  padding: 0.8rem;
+  border-radius: var(--border-radius);
+  background-color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.efficiency-rating:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.rating-stars {
+  padding: 0.5rem;
+}
+
+.rating-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 5px;
+  transition: transform 0.2s, opacity 0.2s;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 5px;
+}
+
+.rating-option:hover {
+  transform: scale(1.1);
+  background-color: rgba(255, 152, 0, 0.1);
+}
+
+.efficiency-star {
+  cursor: pointer;
+  transition: transform 0.2s, color 0.2s;
+  font-size: 1.5rem;
+}
+
+.efficiency-star.fas {
+  color: var(--warning-color);
+}
+
+.rating-label {
+  font-size: 0.75rem;
+  margin-top: 3px;
+  color: var(--muted-color);
+  display: block;
+  text-align: center;
+  transition: color 0.2s;
+}
+
 /* ===== Scrollbar ===== */
 ::-webkit-scrollbar {
   width: 10px;

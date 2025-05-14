@@ -1,9 +1,3 @@
-<!-- Author: -->
-<!-- Wei Dai (24076678) -->
-<!-- Bowen Dai (23951946) -->
-<!-- David Du (24074639) -->
-<!-- Srinath Rajan (24318358) -->
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -21,13 +15,16 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
     />
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/style.css" />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
   </head>
   <body>
     <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
       <div class="container">
-        <a class="navbar-brand" href="index.html">
+        <a class="navbar-brand" href="{{ url_for('main.index') }}">
           <i class="fas fa-clock me-2"></i>StudyTime Tracker
         </a>
         <button
@@ -41,16 +38,22 @@
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav ms-auto">
             <li class="nav-item">
-              <a class="nav-link" href="index.html">Home</a>
+              <a class="nav-link" href="{{ url_for('main.index') }}">Home</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="upload.html">Record Time</a>
+              <a class="nav-link" href="{{ url_for('main.upload') }}"
+                >Record Time</a
+              >
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="visualize.html">Analytics</a>
+              <a class="nav-link" href="{{ url_for('main.visualize') }}"
+                >Analytics</a
+              >
             </li>
             <li class="nav-item">
-              <a class="nav-link active" href="share.html">Share</a>
+              <a class="nav-link active" href="{{ url_for('main.share') }}"
+                >Share</a
+              >
             </li>
           </ul>
         </div>
@@ -95,17 +98,6 @@
                 <i class="fas fa-user-friends me-2"></i>Shared With Me
               </button>
             </li>
-            <li class="nav-item" role="presentation">
-              <button
-                class="nav-link"
-                id="studyGroups-tab"
-                data-bs-toggle="tab"
-                data-bs-target="#studyGroups"
-                type="button"
-              >
-                <i class="fas fa-users me-2"></i>Study Groups
-              </button>
-            </li>
           </ul>
 
           <div
@@ -122,191 +114,113 @@
                 class="d-flex justify-content-between align-items-center mb-4"
               >
                 <h4 class="mb-0">Reports You've Shared</h4>
-                <button
+                <a
+                  href="{{ url_for('main.create_report') }}"
                   class="btn btn-primary"
-                  data-bs-toggle="modal"
-                  data-bs-target="#createReportModal"
                 >
                   <i class="fas fa-plus me-2"></i>Create New Report
-                </button>
+                </a>
               </div>
 
+              {% if my_reports %}
               <div class="list-group">
+                {% for report in my_reports %}
                 <div class="list-group-item list-group-item-action">
                   <div class="d-flex w-100 justify-content-between">
-                    <h5 class="mb-1">Weekly Math Progress</h5>
-                    <small>Expires in 5 days</small>
+                    <h5 class="mb-1">{{ report.title }}</h5>
+                    <small>
+                      {% if report.expires_at %} Expires on {{
+                      report.expires_at.strftime('%Y-%m-%d') }} {% else %} No
+                      expiration {% endif %}
+                    </small>
                   </div>
                   <div class="d-flex w-100 justify-content-between">
-                    <p class="mb-1">
-                      Mathematics study progress shared with Prof. Johnson
-                    </p>
+                    <p class="mb-1">{{ report.description }}</p>
                     <div>
-                      <span class="badge bg-primary me-1">View: 3</span>
-                      <span class="badge bg-secondary">Comments: 1</span>
+                      <span class="badge bg-primary me-1"
+                        >Access code: {{ report.access_code }}</span
+                      >
                     </div>
                   </div>
                   <div
                     class="d-flex justify-content-between align-items-center mt-2"
                   >
-                    <small class="text-muted">Created on Apr 18, 2025</small>
+                    <small class="text-muted"
+                      >Created on {{ report.created_at.strftime('%b %d, %Y')
+                      }}</small
+                    >
                     <div>
-                      <button class="btn btn-sm btn-outline-primary me-1">
+                      <a
+                        href="{{ url_for('main.view_report', access_code=report.access_code) }}"
+                        class="btn btn-sm btn-outline-primary me-1"
+                      >
+                        <i class="fas fa-eye me-1"></i>View
+                      </a>
+                      <a
+                        href="{{ url_for('main.edit_report', report_id=report.id) }}"
+                        class="btn btn-sm btn-outline-primary me-1"
+                      >
                         <i class="fas fa-edit me-1"></i>Edit
-                      </button>
-                      <button class="btn btn-sm btn-outline-danger">
+                      </a>
+                      <button
+                        class="btn btn-sm btn-outline-danger delete-report-btn"
+                        data-report-id="{{ report.id }}"
+                        data-report-title="{{ report.title }}"
+                      >
                         <i class="fas fa-trash-alt me-1"></i>Delete
                       </button>
                     </div>
                   </div>
                 </div>
-
-                <div class="list-group-item list-group-item-action">
-                  <div class="d-flex w-100 justify-content-between">
-                    <h5 class="mb-1">Programming Study Group Report</h5>
-                    <small>No expiration</small>
-                  </div>
-                  <div class="d-flex w-100 justify-content-between">
-                    <p class="mb-1">
-                      Shared with CS Team Study Group (5 members)
-                    </p>
-                    <div>
-                      <span class="badge bg-primary me-1">View: 12</span>
-                      <span class="badge bg-secondary">Comments: 8</span>
-                    </div>
-                  </div>
-                  <div
-                    class="d-flex justify-content-between align-items-center mt-2"
-                  >
-                    <small class="text-muted">Created on Apr 10, 2025</small>
-                    <div>
-                      <button class="btn btn-sm btn-outline-primary me-1">
-                        <i class="fas fa-edit me-1"></i>Edit
-                      </button>
-                      <button class="btn btn-sm btn-outline-danger">
-                        <i class="fas fa-trash-alt me-1"></i>Delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                {% endfor %}
               </div>
+              {% else %}
+              <div class="alert alert-info">
+                <p class="mb-0">
+                  You haven't created any reports yet.
+                  <a href="{{ url_for('main.create_report') }}"
+                    >Create your first report!</a
+                  >
+                </p>
+              </div>
+              {% endif %}
             </div>
 
             <!-- Shared With Me Tab -->
             <div class="tab-pane fade" id="sharedWithMe" role="tabpanel">
               <h4 class="mb-4">Reports Shared With You</h4>
 
+              {% if shared_reports %}
               <div class="list-group">
+                {% for report in shared_reports %}
                 <div class="list-group-item list-group-item-action">
                   <div class="d-flex w-100 justify-content-between">
-                    <h5 class="mb-1">Physics Study Progress</h5>
-                    <small>From: Alex Chen</small>
+                    <h5 class="mb-1">{{ report.title }}</h5>
+                    <small>From: {{ report.owner.username }}</small>
                   </div>
-                  <p class="mb-1">
-                    Group study session analytics for upcoming exam
-                  </p>
+                  <p class="mb-1">{{ report.description }}</p>
                   <div
                     class="d-flex justify-content-between align-items-center mt-2"
                   >
-                    <small class="text-muted">Shared on Apr 20, 2025</small>
-                    <button class="btn btn-sm btn-outline-primary">
+                    <small class="text-muted"
+                      >Shared on {{ report.created_at.strftime('%b %d, %Y')
+                      }}</small
+                    >
+                    <a
+                      href="{{ url_for('main.view_report', access_code=report.access_code) }}"
+                      class="btn btn-sm btn-outline-primary"
+                    >
                       <i class="fas fa-eye me-1"></i>View Report
-                    </button>
+                    </a>
                   </div>
                 </div>
-
-                <div class="list-group-item list-group-item-action">
-                  <div class="d-flex w-100 justify-content-between">
-                    <h5 class="mb-1">Literature Study Habits</h5>
-                    <small>From: Sophia Park</small>
-                  </div>
-                  <p class="mb-1">
-                    Comparative study techniques for literature analysis
-                  </p>
-                  <div
-                    class="d-flex justify-content-between align-items-center mt-2"
-                  >
-                    <small class="text-muted">Shared on Apr 15, 2025</small>
-                    <button class="btn btn-sm btn-outline-primary">
-                      <i class="fas fa-eye me-1"></i>View Report
-                    </button>
-                  </div>
-                </div>
+                {% endfor %}
               </div>
-            </div>
-
-            <!-- Study Groups Tab -->
-            <div class="tab-pane fade" id="studyGroups" role="tabpanel">
-              <div
-                class="d-flex justify-content-between align-items-center mb-4"
-              >
-                <h4 class="mb-0">Your Study Groups</h4>
-                <button class="btn btn-primary">
-                  <i class="fas fa-plus me-2"></i>Create Group
-                </button>
+              {% else %}
+              <div class="alert alert-info">
+                <p class="mb-0">No reports have been shared with you yet.</p>
               </div>
-
-              <div class="card mb-4">
-                <div class="card-header bg-light">
-                  <div
-                    class="d-flex justify-content-between align-items-center"
-                  >
-                    <h5 class="mb-0">CS Algorithm Study Group</h5>
-                    <span class="badge bg-success">5 Members</span>
-                  </div>
-                </div>
-                <div class="card-body">
-                  <p>
-                    Collaborative study group for Computer Science algorithms
-                    and data structures.
-                  </p>
-                  <div class="d-flex mb-3">
-                    <div class="avatar-group">
-                      <span class="avatar">JD</span>
-                      <span class="avatar">AK</span>
-                      <span class="avatar">BP</span>
-                      <span class="avatar">+2</span>
-                    </div>
-                  </div>
-                  <div class="d-flex justify-content-between">
-                    <button class="btn btn-outline-primary">
-                      <i class="fas fa-chart-line me-1"></i>Group Analytics
-                    </button>
-                    <button class="btn btn-outline-secondary">
-                      <i class="fas fa-cog me-1"></i>Manage
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div class="card">
-                <div class="card-header bg-light">
-                  <div
-                    class="d-flex justify-content-between align-items-center"
-                  >
-                    <h5 class="mb-0">Physics Exam Prep</h5>
-                    <span class="badge bg-success">3 Members</span>
-                  </div>
-                </div>
-                <div class="card-body">
-                  <p>Group focused on preparing for upcoming physics exams.</p>
-                  <div class="d-flex mb-3">
-                    <div class="avatar-group">
-                      <span class="avatar">AC</span>
-                      <span class="avatar">MR</span>
-                      <span class="avatar">You</span>
-                    </div>
-                  </div>
-                  <div class="d-flex justify-content-between">
-                    <button class="btn btn-outline-primary">
-                      <i class="fas fa-chart-line me-1"></i>Group Analytics
-                    </button>
-                    <button class="btn btn-outline-secondary">
-                      <i class="fas fa-cog me-1"></i>Manage
-                    </button>
-                  </div>
-                </div>
-              </div>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -319,18 +233,14 @@
             </div>
             <div class="card-body">
               <div class="d-grid gap-2">
-                <button
+                <a
+                  href="{{ url_for('main.create_report') }}"
                   class="btn btn-outline-primary"
-                  data-bs-toggle="modal"
-                  data-bs-target="#createReportModal"
                 >
                   <i class="fas fa-plus-circle me-2"></i>Create New Report
-                </button>
-                <button class="btn btn-outline-secondary">
+                </a>
+                <button class="btn btn-outline-secondary" disabled>
                   <i class="fas fa-user-plus me-2"></i>Invite Study Partner
-                </button>
-                <button class="btn btn-outline-secondary">
-                  <i class="fas fa-users me-2"></i>Join Study Group
                 </button>
               </div>
             </div>
@@ -343,16 +253,32 @@
             </div>
             <div class="card-body">
               <p>Enter a report access code shared with you:</p>
-              <div class="input-group mb-3">
+              <form
+                action="{{ url_for('main.access_report') }}"
+                method="POST"
+                class="access-code-form"
+              >
                 <input
-                  type="text"
-                  class="form-control"
-                  placeholder="Enter access code"
+                  type="hidden"
+                  name="csrf_token"
+                  value="{{ csrf_token() }}"
                 />
-                <button class="btn btn-primary" type="button">
-                  <i class="fas fa-arrow-right"></i>
-                </button>
-              </div>
+                <div class="input-group mb-3">
+                  <input
+                    type="text"
+                    class="form-control"
+                    name="access_code"
+                    placeholder="Enter access code"
+                    required
+                  />
+                  <button class="btn btn-primary" type="submit">
+                    <i class="fas fa-arrow-right"></i>
+                  </button>
+                </div>
+                {% if access_error %}
+                <div class="alert alert-danger mt-2">{{ access_error }}</div>
+                {% endif %}
+              </form>
             </div>
           </div>
 
@@ -386,19 +312,19 @@
       </div>
     </main>
 
-    <!-- Create Report Modal -->
+    <!-- Delete Report Confirmation Modal -->
     <div
       class="modal fade"
-      id="createReportModal"
+      id="deleteReportModal"
       tabindex="-1"
-      aria-labelledby="createReportModalLabel"
+      aria-labelledby="deleteReportModalLabel"
       aria-hidden="true"
     >
-      <div class="modal-dialog modal-lg">
+      <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="createReportModalLabel">
-              Create Shared Report
+            <h5 class="modal-title" id="deleteReportModalLabel">
+              Confirm Delete
             </h5>
             <button
               type="button"
@@ -408,158 +334,13 @@
             ></button>
           </div>
           <div class="modal-body">
-            <form>
-              <div class="mb-3">
-                <label for="reportTitle" class="form-label">Report Title</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  id="reportTitle"
-                  placeholder="Enter a descriptive title"
-                />
-              </div>
-              <div class="mb-3">
-                <label for="reportDescription" class="form-label"
-                  >Description</label
-                >
-                <textarea
-                  class="form-control"
-                  id="reportDescription"
-                  rows="2"
-                  placeholder="What is this report about?"
-                ></textarea>
-              </div>
-
-              <div class="row mb-3">
-                <div class="col-md-6">
-                  <label for="startDate" class="form-label"
-                    >Date Range Start</label
-                  >
-                  <input type="date" class="form-control" id="startDate" />
-                </div>
-                <div class="col-md-6">
-                  <label for="endDate" class="form-label">Date Range End</label>
-                  <input type="date" class="form-control" id="endDate" />
-                </div>
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label">Subjects to Include</label>
-                <div class="subject-list">
-                  <div class="form-check">
-                    <input
-                      class="form-check-input"
-                      type="checkbox"
-                      value=""
-                      id="subjectMath"
-                      checked
-                    />
-                    <label class="form-check-label" for="subjectMath">
-                      Mathematics
-                    </label>
-                  </div>
-                  <div class="form-check">
-                    <input
-                      class="form-check-input"
-                      type="checkbox"
-                      value=""
-                      id="subjectCS"
-                      checked
-                    />
-                    <label class="form-check-label" for="subjectCS">
-                      Computer Science
-                    </label>
-                  </div>
-                  <div class="form-check">
-                    <input
-                      class="form-check-input"
-                      type="checkbox"
-                      value=""
-                      id="subjectPhysics"
-                    />
-                    <label class="form-check-label" for="subjectPhysics">
-                      Physics
-                    </label>
-                  </div>
-                  <div class="form-check">
-                    <input
-                      class="form-check-input"
-                      type="checkbox"
-                      value=""
-                      id="subjectLit"
-                    />
-                    <label class="form-check-label" for="subjectLit">
-                      Literature
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label">Share With</label>
-                <select class="form-select mb-2" id="shareType">
-                  <option selected>Select sharing option</option>
-                  <option value="1">Individual Users</option>
-                  <option value="2">Study Group</option>
-                  <option value="3">Access Code (Anyone with code)</option>
-                </select>
-
-                <div class="input-group">
-                  <input
-                    type="email"
-                    class="form-control"
-                    placeholder="Enter email address"
-                  />
-                  <button class="btn btn-outline-secondary" type="button">
-                    Add
-                  </button>
-                </div>
-
-                <div class="mt-2">
-                  <span class="badge bg-primary p-2 me-1"
-                    >john.doe@example.com <i class="fas fa-times ms-1"></i
-                  ></span>
-                  <span class="badge bg-primary p-2"
-                    >prof.smith@university.edu <i class="fas fa-times ms-1"></i
-                  ></span>
-                </div>
-              </div>
-
-              <div class="mb-3">
-                <label for="expiryDate" class="form-label"
-                  >Expiration Date (Optional)</label
-                >
-                <input type="date" class="form-control" id="expiryDate" />
-                <div class="form-text">Leave blank for no expiration.</div>
-              </div>
-
-              <div class="mb-3">
-                <label class="form-label">Permission Level</label>
-                <div class="form-check">
-                  <input
-                    class="form-check-input"
-                    type="radio"
-                    name="permissionLevel"
-                    id="viewOnly"
-                    checked
-                  />
-                  <label class="form-check-label" for="viewOnly">
-                    View Only
-                  </label>
-                </div>
-                <div class="form-check">
-                  <input
-                    class="form-check-input"
-                    type="radio"
-                    name="permissionLevel"
-                    id="viewComment"
-                  />
-                  <label class="form-check-label" for="viewComment">
-                    View and Comment
-                  </label>
-                </div>
-              </div>
-            </form>
+            <p>
+              Are you sure you want to delete the report "<span
+                id="reportTitleToDelete"
+              ></span
+              >"?
+            </p>
+            <p class="text-danger">This action cannot be undone.</p>
           </div>
           <div class="modal-footer">
             <button
@@ -569,7 +350,16 @@
             >
               Cancel
             </button>
-            <button type="button" class="btn btn-primary">Create Report</button>
+            <form id="deleteReportForm" action="" method="POST">
+              <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+              />
+              <button type="submit" class="btn btn-danger">
+                Delete Report
+              </button>
+            </form>
           </div>
         </div>
       </div>
@@ -586,10 +376,26 @@
           <div class="col-md-3">
             <h5>Links</h5>
             <ul class="list-unstyled">
-              <li><a href="index.html" class="text-white">Home</a></li>
-              <li><a href="upload.html" class="text-white">Record Time</a></li>
-              <li><a href="visualize.html" class="text-white">Analytics</a></li>
-              <li><a href="share.html" class="text-white">Share</a></li>
+              <li>
+                <a href="{{ url_for('main.index') }}" class="text-white"
+                  >Home</a
+                >
+              </li>
+              <li>
+                <a href="{{ url_for('main.upload') }}" class="text-white"
+                  >Record Time</a
+                >
+              </li>
+              <li>
+                <a href="{{ url_for('main.visualize') }}" class="text-white"
+                  >Analytics</a
+                >
+              </li>
+              <li>
+                <a href="{{ url_for('main.share') }}" class="text-white"
+                  >Share</a
+                >
+              </li>
             </ul>
           </div>
           <div class="col-md-3">
@@ -613,6 +419,32 @@
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom JS -->
-    <script src="js/main.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    <!-- Report Management Scripts -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // Set up delete report confirmation modal
+        const deleteModal = document.getElementById("deleteReportModal");
+        const reportTitleSpan = document.getElementById("reportTitleToDelete");
+        const deleteForm = document.getElementById("deleteReportForm");
+
+        // Add event listeners to all delete buttons
+        document.querySelectorAll(".delete-report-btn").forEach((button) => {
+          button.addEventListener("click", function () {
+            const reportId = this.getAttribute("data-report-id");
+            const reportTitle = this.getAttribute("data-report-title");
+
+            // Update modal content
+            reportTitleSpan.textContent = reportTitle;
+            deleteForm.action = `/delete_report/${reportId}`;
+
+            // Show modal
+            const bsModal = new bootstrap.Modal(deleteModal);
+            bsModal.show();
+          });
+        });
+      });
+    </script>
   </body>
 </html>

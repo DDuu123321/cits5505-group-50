@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - StudyTime Tracker</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('main.index') }}">
+                <i class="fas fa-clock me-2"></i>StudyTime Tracker
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('main.index') }}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.upload') }}">Record Time</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.visualize') }}">Analytics</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.share') }}">Share</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-user me-1"></i> {{ current_user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="{{ url_for('main.profile') }}">My Profile</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('main.logout') }}">Logout</a></li>
+                        </ul>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.login') }}">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.register') }}">Register</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero-section text-white text-center py-5">
+        <div class="container">
+            <h1 class="display-4 mb-4">Welcome back, {{ current_user.username }}!</h1>
+            <p class="lead mb-4">
+                Continue tracking your study time to improve your learning efficiency.
+            </p>
+            <a href="{{ url_for('main.upload') }}" class="btn btn-light btn-lg mx-2">
+                <i class="fas fa-stopwatch me-2"></i>Start Studying
+            </a>
+            <a href="{{ url_for('main.visualize') }}" class="btn btn-outline-light btn-lg mx-2">
+                <i class="fas fa-chart-line me-2"></i>View Analytics
+            </a>
+        </div>
+    </header>
+
+    <!-- Dashboard Cards -->
+    <section class="py-5">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card h-100 dashboard-card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-hourglass-half feature-icon mb-3"></i>
+                            <h3 class="card-title">{{ total_weekly_time }} Hours</h3>
+                            <p class="card-text">Studied this week</p>
+                            <div class="progress mt-3">
+                                <div class="progress-bar bg-primary" role="progressbar" style="width: {{ (total_weekly_time/20)*100 }}%" aria-valuenow="{{ total_weekly_time }}" aria-valuemin="0" aria-valuemax="20"></div>
+                            </div>
+                            <small class="text-muted mt-2 d-block">{{ (total_weekly_time/20)*100|round }}% of 20 hour weekly goal</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 dashboard-card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-book feature-icon mb-3"></i>
+                            <h3 class="card-title">{{ subjects|length }}</h3>
+                            <p class="card-text">Subjects tracked</p>
+                            <div class="subject-dots d-flex justify-content-center flex-wrap mt-3">
+                                {% for subject in subjects %}
+                                <div class="subject-dot" style="background-color: {{ subject.color_code }};" title="{{ subject.name }}"></div>
+                                {% endfor %}
+                            </div>
+                            <a href="{{ url_for('main.add_subject') }}" class="btn btn-sm btn-outline-primary mt-3">Add Subject</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100 dashboard-card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-calendar-check feature-icon mb-3"></i>
+                            <h3 class="card-title">0</h3>
+                            <p class="card-text">Study goals achieved</p>
+                            <a href="#" class="btn btn-sm btn-outline-primary mt-3">Set Goals</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recent Sessions -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <h2 class="mb-4">Recent Study Sessions</h2>
+            {% if recent_sessions %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Subject</th>
+                            <th>Duration</th>
+                            <th>Efficiency</th>
+                            <th>Location</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for session in recent_sessions %}
+                        <tr>
+                            <td>{{ session.date.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                {% set subject = subjects|selectattr('name', 'equalto', session.subject)|first %}
+                                <span class="color-dot" style="background-color: {{ subject.color_code if subject else '#ccc' }};"></span>
+                                {{ session.subject }}
+                            </td>
+                            <td>
+                                {% set duration = (datetime.combine(session.date, session.end_time) - datetime.combine(session.date, session.start_time)) %}
+                                {% if duration.total_seconds() < 0 %}
+                                    {% set duration = duration + timedelta(hours=24) %}
+                                {% endif %}
+                                {{ duration.seconds // 3600 }}h {{ (duration.seconds % 3600) // 60 }}m
+                            </td>
+                            <td>
+                                <div class="rating">
+                                    {% for i in range(5) %}
+                                        <i class="{% if i < session.efficiency %}fas{% else %}far{% endif %} fa-star text-warning"></i>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td>{{ session.location }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="text-center mt-3">
+                <a href="{{ url_for('main.visualize') }}" class="btn btn-primary">View All Sessions</a>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <p class="mb-0 text-center">You haven't recorded any study sessions yet. <a href="{{ url_for('main.upload') }}">Start tracking your study time now!</a></p>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-clock me-2"></i>StudyTime Tracker</h5>
+                    <p>Track, analyze, and optimize your study habits.</p>
+                </div>
+                <div class="col-md-3">
+                    <h5>Links</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="{{ url_for('main.index') }}" class="text-white">Home</a></li>
+                        <li><a href="{{ url_for('main.upload') }}" class="text-white">Record Time</a></li>
+                        <li><a href="{{ url_for('main.visualize') }}" class="text-white">Analytics</a></li>
+                        <li><a href="{{ url_for('main.share') }}" class="text-white">Share</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3">
+                    <h5>Contact</h5>
+                    <ul class="list-unstyled">
+                        <li>24076678@student.uwa.edu.au</li>
+                        <li>23951946@student.uwa.edu.au</li>
+                        <li>24074639@student.uwa.edu.au</li>
+                        <li>24318358@student.uwa.edu.au</li>
+                        <li>University of Western Australia</li>
+                    </ul>
+                </div>
+            </div>
+            <hr />
+            <div class="text-center">
+                <p>&copy; 2025 StudyTime Tracker - CITS5505 Project</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    <style>
+        .dashboard-card {
+            transition: transform 0.3s;
+            border-radius: 0.5rem;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+        }
+        .feature-icon {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+        }
+        .subject-dots {
+            gap: 8px;
+        }
+        .subject-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+        .color-dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+    </style>
+</body>
+</html>

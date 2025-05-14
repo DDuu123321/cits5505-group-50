@@ -498,9 +498,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // 其他初始化代码...
 });
 
-
-
-
 /**
  * Initialize visualization page components
  */
@@ -736,6 +733,7 @@ function formatDate(dateString) {
     day: 'numeric'
   });
 }
+
 
 
 
