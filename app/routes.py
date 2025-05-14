@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
 from app.forms import RegistrationForm, LoginForm, StudyRecordForm, SubjectForm, ReportForm
-from app.models import User, StudySession, Subject, Report
+from app.models import User, StudySession, Subject, Report, SharedWith
 from flask_login import login_user, current_user, logout_user, login_required
 from datetime import datetime, timedelta
 from app import db, bcrypt
@@ -241,10 +241,19 @@ def share():
     my_reports = Report.query.filter_by(owner_id=current_user.id).order_by(Report.created_at.desc()).all()
     
     # Get reports shared with the current user
+    # This now retrieves reports from the SharedWith table
+    shared_reports_data = db.session.query(Report, SharedWith)\
+        .join(SharedWith, Report.id == SharedWith.report_id)\
+        .filter(SharedWith.user_id == current_user.id)\
+        .order_by(Report.created_at.desc()).all()
+    
+    # Format the data for template
+    shared_reports = [report for report, _ in shared_reports_data]
+
     # This is based on reports the user has viewed with access codes
     # In a more advanced implementation, this could use a SharedWith model to track shares
     shared_reports = []
-    
+
     # Get access error from query parameters (if present)
     access_error = request.args.get('access_error')
     
@@ -265,7 +274,8 @@ def create_report():
     1. Displays the report creation form
     2. Processes form submission
     3. Creates a new report with a unique access code
-    4. Redirects to the share page on success
+    4. Creates SharedWith entries for selected users
+    5. Redirects to the share page on success
     """
     form = ReportForm(user=current_user)
     
@@ -296,6 +306,31 @@ def create_report():
             )
             
             db.session.add(new_report)
+            db.session.flush()  # Get the report ID
+            
+            # Add SharedWith entries for selected users
+            if form.share_with_users.data:
+                for user_id in form.share_with_users.data:
+                    shared_with = SharedWith(
+                        report_id=new_report.id,
+                        user_id=user_id,
+                        permission_level=form.permission_level.data
+                    )
+                    db.session.add(shared_with)
+            
+            # Handle email sharing (optional)
+            if form.share_with.data:
+                # Look up user by email
+                email = form.share_with.data.strip()
+                user = User.query.filter_by(email=email).first()
+                if user and user.id != current_user.id and user.id not in form.share_with_users.data:
+                    shared_with = SharedWith(
+                        report_id=new_report.id,
+                        user_id=user.id,
+                        permission_level=form.permission_level.data
+                    )
+                    db.session.add(shared_with)
+            
             db.session.commit()
             
             flash('Report created successfully! Share the access code: ' + access_code, 'success')
@@ -310,7 +345,7 @@ def create_report():
             print("Form validation failed")
             print(form.errors)  
     
-    return render_template('create_report.html', title='Create Report', form=form)
+    return render_template('create_report.html', title='Create Report', form=form, editing=False)
 
 @main.route('/edit_report/<int:report_id>', methods=['GET', 'POST'])
 @login_required
@@ -323,7 +358,7 @@ def edit_report(report_id):
     2. Verifies the current user is the owner
     3. Displays the report edit form
     4. Processes form submission
-    5. Updates the report details
+    5. Updates the report details and sharing permissions
     """
     # Get the report
     report = Report.query.get_or_404(report_id)
@@ -331,6 +366,7 @@ def edit_report(report_id):
     # Check ownership
     if report.owner_id != current_user.id:
         flash('You do not have permission to edit this report.', 'danger')
+
         return redirect(url_for('main.share'))
     
     # Initialize form with report data
@@ -343,6 +379,10 @@ def edit_report(report_id):
         form.expiry_date.data = report.expires_at
         if report.subjects:
             form.subjects.data = report.subjects.split(',')
+            
+        # Pre-select shared users
+        current_shares = SharedWith.query.filter_by(report_id=report.id).all()
+        form.share_with_users.data = [share.user_id for share in current_shares]
     
     if form.validate_on_submit():
         try:
@@ -355,6 +395,33 @@ def edit_report(report_id):
             report.permission_level = form.permission_level.data
             report.expires_at = form.expiry_date.data
             
+            # Update sharing permissions
+            # Remove all existing shares and add new ones
+            SharedWith.query.filter_by(report_id=report.id).delete()
+            
+            # Add new shares from form
+            if form.share_with_users.data:
+                for user_id in form.share_with_users.data:
+                    shared_with = SharedWith(
+                        report_id=report.id,
+                        user_id=user_id,
+                        permission_level=form.permission_level.data
+                    )
+                    db.session.add(shared_with)
+            
+            # Handle email sharing (optional)
+            if form.share_with.data:
+                # Look up user by email
+                email = form.share_with.data.strip()
+                user = User.query.filter_by(email=email).first()
+                if user and user.id != current_user.id and user.id not in form.share_with_users.data:
+                    shared_with = SharedWith(
+                        report_id=report.id,
+                        user_id=user.id,
+                        permission_level=form.permission_level.data
+                    )
+                    db.session.add(shared_with)
+            
             db.session.commit()
             
             flash('Report updated successfully!', 'success')
@@ -362,12 +429,12 @@ def edit_report(report_id):
             
         except Exception as e:
             db.session.rollback()
-            print(f"Error updating report: {str(e)}")  # 添加错误日志
+            print(f"Error updating report: {str(e)}")  
             flash(f'Error updating report: {str(e)}', 'danger')
     else:
         if request.method == 'POST':
             print("Form validation failed")
-            print(form.errors)  # 打印表单验证错误
+            print(form.errors)  
     
     return render_template('create_report.html', title='Edit Report', form=form, editing=True)
 
@@ -380,7 +447,7 @@ def delete_report(report_id):
     This function:
     1. Retrieves the report by ID
     2. Verifies the current user is the owner
-    3. Deletes the report from the database
+    3. Deletes the report and all associated shares from the database
     """
     # Get the report
     report = Report.query.get_or_404(report_id)
@@ -391,7 +458,8 @@ def delete_report(report_id):
         return redirect(url_for('main.share'))
     
     try:
-        # Delete the report
+        # Delete the report (cascade will handle removing SharedWith entries)
+
         db.session.delete(report)
         db.session.commit()
         
@@ -439,6 +507,8 @@ def view_report(access_code):
     This function:
     1. Retrieves the report by access code
     2. Checks if the report has expired
+    3. Verifies the current user has permission to view the report
+    4. Retrieves relevant study session data
     3. Retrieves relevant study session data
     4. Renders the report view template
     """
@@ -448,7 +518,17 @@ def view_report(access_code):
     # Check if report has expired
     if report.expires_at and report.expires_at < datetime.utcnow():
         flash('This report has expired', 'danger')
-        return redirect(url_for('main.index'))
+        return redirect(url_for('main.share'))
+    
+    # Check permission - user must be the owner or have the report shared with them
+    if current_user.is_authenticated:
+        has_permission = (current_user.id == report.owner_id) or \
+                         (SharedWith.query.filter_by(report_id=report.id, user_id=current_user.id).first() is not None)
+        
+        # If user doesn't have permission and is logged in, deny access
+        if not has_permission:
+            flash('You do not have permission to view this report.', 'danger')
+            return redirect(url_for('main.share'))
     
     # Get subject list from the report
     subject_list = report.subjects.split(',') if report.subjects else ['']
@@ -514,6 +594,7 @@ def view_report(access_code):
             'interruptions': 'None'  # Placeholder, could be expanded in the future
         })
     
+    # Calculate averages and prepare chart data
     # Calculate averages
     avg_efficiency = round(total_efficiency / len(sessions), 1) if sessions else 0
     
@@ -522,8 +603,31 @@ def view_report(access_code):
     for loc, ratings in location_efficiency.items():
         location_avg_efficiency[loc] = sum(ratings) / len(ratings)
     
+    # Prepare chart data
+    chart_data = {
+        'subject_time_labels': list(subject_times.keys()),
+        'subject_time_values': list(subject_times.values()),
+        'daily_labels': list(daily_times.keys()),
+        'daily_values': list(daily_times.values()),
+        'location_labels': list(location_avg_efficiency.keys()),
+        'location_values': list(location_avg_efficiency.values())
+    }
+    
     # Get the owner's details
     owner = User.query.get(report.owner_id)
+    
+    # Get comments if allowed (not implemented in this version)
+    comments = []  # Placeholder for future implementation
+    
+    # Check the current user's permission level for this report
+    can_comment = False
+    if current_user.is_authenticated:
+        if current_user.id == report.owner_id:
+            can_comment = True
+        else:
+            shared = SharedWith.query.filter_by(report_id=report.id, user_id=current_user.id).first()
+            if shared and shared.permission_level == 'comment':
+                can_comment = True
     
     return render_template(
         'view_report.html',
@@ -534,7 +638,10 @@ def view_report(access_code):
         avg_efficiency=avg_efficiency,
         subject_times=subject_times,
         daily_times=daily_times,
-        location_efficiency=location_avg_efficiency
+        location_efficiency=location_avg_efficiency,
+        chart_data=chart_data,
+        comments=comments,
+        can_comment=can_comment
     )
 
 @main.route('/profile')
@@ -546,9 +653,9 @@ def profile():
     # Calculate total study time
     sessions = StudySession.query.filter_by(user_id=current_user.id).all()
     total_seconds = 0
-    total_study_time = 0  # 初始化为0，确保即使没有会话也有默认值
+    total_study_time = 0  
     
-    if sessions:  # 只有在有会话时才计算
+    if sessions:  
         for session in sessions:
             duration = datetime.combine(session.date, session.end_time) - datetime.combine(session.date, session.start_time)
             if duration.total_seconds() < 0:
@@ -596,14 +703,12 @@ def add_subject():
 def analytics_data():
     try:
         data = request.json or {}
-        # 使用安全的默认值，确保日期字符串不会是None
         default_from = '2000-01-01'
         default_to = datetime.now().strftime('%Y-%m-%d')
         
         date_from_str = data.get('dateFrom')
         date_to_str = data.get('dateTo')
         
-        # 确保dateFrom和dateTo是有效的日期字符串
         if not date_from_str or not isinstance(date_from_str, str):
             date_from_str = default_from
         if not date_to_str or not isinstance(date_to_str, str):
@@ -698,7 +803,6 @@ def analytics_data():
         })
     except Exception as e:
         print(f"Analytics data error: {str(e)}")
-        # 返回错误响应，但确保前端能够处理它
         return jsonify({
             'error': str(e),
             'sessions': [],
