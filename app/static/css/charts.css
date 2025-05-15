@@ -1,0 +1,31 @@
+/* 添加图表容器样式以支持动态高度 */
+.chart-placeholder {
+  transition: height 0.3s ease;
+  min-height: 250px;
+}
+
+/* 为图表添加过渡效果 */
+canvas {
+  transition: all 0.3s ease;
+}
+
+/* 为Location效率图表添加样式，使其在内容多时能够正确显示 */
+#locationChartContainer {
+  transition: height 0.3s ease;
+  overflow: visible;
+  min-height: 250px;
+}
+
+/* 确保图表的响应性 */
+@media (max-width: 992px) {
+  #efficiencyTimeChartContainer,
+  #locationChartContainer {
+    height: 250px !important; /* 在小屏幕上重置为默认高度 */
+  }
+}
+
+/* 改进图表显示区域 */
+.chart-placeholder canvas {
+  max-width: 100%;
+  max-height: 100%;
+}
