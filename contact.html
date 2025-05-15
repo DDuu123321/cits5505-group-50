@@ -1,0 +1,73 @@
+<!-- Author: -->
+<!-- Wei Dai (24076678) -->
+<!-- Bowen Dai (23951946) -->
+<!-- David Du (24074639) -->
+<!-- Srinath Rajan (24318358) -->
+
+
+<!--This Code is exclusively for Contact page-->
+<!--Displays Contact Details  -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Contact Us - StudyTime Tracker</title>
+  <!--Bootstrap-->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Font Awesome Icons -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    body, html {
+      height: 100%;
+    }
+    .page-wrapper {
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    main {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+  
+  
+  <!-- Navigation Bar -->
+<div class="page-wrapper">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">
+        <i class="fas fa-clock me-2"></i>StudyTime Tracker
+      </a>
+    </div>
+  </nav>
+
+  <main class="container py-5">
+    <h1>Contact Us</h1>
+    <p class="lead">If you have any questions or feedback, please reach out to one of our team members:</p>
+    
+    <!--contact list-->
+    <ul class="list-group">
+      <li class="list-group-item">24076678@student.uwa.edu.au</li>
+      <li class="list-group-item">23951946@student.uwa.edu.au</li>
+      <li class="list-group-item">24074639@student.uwa.edu.au</li>
+      <li class="list-group-item">24318358@student.uwa.edu.au</li>
+    </ul>
+  </main>
+
+
+  <!--Footer-->
+  <footer class="bg-dark text-white py-4 mt-auto">
+    <div class="container text-center">
+      <p>&copy; 2025 StudyTime Tracker - CITS5505 Project</p>
+    </div>
+  </footer>
+</div>
+</body>
+</html>
