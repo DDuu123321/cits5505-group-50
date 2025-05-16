@@ -60,25 +60,23 @@ class Report(db.Model):
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     owner = db.relationship('User', backref='reports')
     # Add relationship to SharedWith
-    shared_with = db.relationship('SharedWith', backref='report', lazy=True, cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"Report('{self.title}', created by {self.owner.username})"
 
-# New model to track report sharing relationships
-class SharedWith(db.Model):
-    __tablename__ = 'shared_with'
-    __table_args__ = (
-        db.Index('idx_report_user', 'report_id', 'user_id'),
-    )
-    id = db.Column(db.Integer, primary_key=True)
-    report_id = db.Column(db.Integer, db.ForeignKey('report.id', ondelete='CASCADE'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    shared_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    permission_level = db.Column(db.String(20), default='view')  # 'view' or 'comment'
-    
-    # Relationship to the user the report is shared with
-    shared_user = db.relationship('User')
-    
+
+class DirectShare(db.Model):
+    __tablename__ = 'direct_share' # 表名
+    id = db.Column(db.Integer, primary_key=True) # 每条分享的唯一ID
+    sharer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # 分享者的用户ID
+    recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # 接收者的用户ID
+    shared_total_study_time = db.Column(db.String(100)) # 分享的总学习时间 (文本)
+    shared_longest_study_day_info = db.Column(db.String(150)) # 分享的学习最久的那天信息 (文本)
+    shared_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow) # 分享的时间
+
+    # 建立与 User 模型的关系，方便我们通过 DirectShare 对象直接获取分享者和接收者的用户信息
+    sharer = db.relationship('User', foreign_keys=[sharer_id], backref=db.backref('sent_shares', lazy='dynamic'))
+    recipient = db.relationship('User', foreign_keys=[recipient_id], backref=db.backref('received_shares', lazy='dynamic'))
+
     def __repr__(self):
-        return f"SharedWith(report_id={self.report_id}, user_id={self.user_id})"
+        return f'<DirectShare from {self.sharer_id} to {self.recipient_id} at {self.shared_at}>'

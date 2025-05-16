@@ -13,11 +13,15 @@ csrf = CSRFProtect()  # Add CSRF protection
 login_manager.login_view = 'main.login'
 login_manager.login_message_category = 'info'
 
-def create_app():
+def create_app(test_config=None):
     app = Flask(__name__)
     app.config['SECRET_KEY'] = 'super-secret-key'
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+      # 添加这个条件判断
+    if test_config:
+        app.config.update(test_config)
 
     db.init_app(app)
     bcrypt.init_app(app)

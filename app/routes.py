@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
 from app.forms import RegistrationForm, LoginForm, StudyRecordForm, SubjectForm, ReportForm
-from app.models import User, StudySession, Subject, Report, SharedWith
+from app.models import User, StudySession, Subject, Report, DirectShare
 from flask_login import login_user, current_user, logout_user, login_required
 from datetime import datetime, timedelta
 from app import db, bcrypt
@@ -225,123 +225,172 @@ def visualize():
     
     return render_template('visualize.html', sessions=sessions, datetime=datetime)
 
-@main.route('/share')
+@main.route('/share', methods=['GET', 'POST']) # 允许 GET 和 POST 请求
 @login_required
 def share():
-    """
-    Display the share page with user's shared reports and reports shared with them.
-    
-    This page allows users to:
-    1. View reports they have created and shared
-    2. View reports shared with them by other users
-    3. Access options to create, edit, and delete reports
-    4. Enter access codes to view reports shared via code
-    """
-    # Get reports created by the current user
-    my_reports = Report.query.filter_by(owner_id=current_user.id).order_by(Report.created_at.desc()).all()
-    
-    # Get reports shared with the current user
-    # This now retrieves reports from the SharedWith table
-    shared_reports_data = db.session.query(Report, SharedWith)\
-        .join(SharedWith, Report.id == SharedWith.report_id)\
-        .filter(SharedWith.user_id == current_user.id)\
-        .order_by(Report.created_at.desc()).all()
-    
-    # Format the data for template
-    shared_reports = [report for report, _ in shared_reports_data]
-    
-    # Get access error from query parameters (if present)
-    access_error = request.args.get('access_error')
-    
+    if request.method == 'POST':
+        recipient_username = request.form.get('recipient_username')
+
+        if not recipient_username:
+            flash('Please select a user to share with.', 'warning')
+            return redirect(url_for('main.share'))
+
+        recipient = User.query.filter_by(username=recipient_username).first()
+
+        if not recipient:
+            flash('Selected user not found.', 'danger')
+            return redirect(url_for('main.share'))
+
+        if recipient.id == current_user.id:
+            flash('You cannot share stats with yourself.', 'warning')
+            return redirect(url_for('main.share'))
+
+        # --- 1. 计算分享者的总学习时间 (以分钟为单位) ---
+        # 根据你的 StudySession 结构，使用 start_time 和 end_time 计算总时长
+        all_sessions_for_total = StudySession.query.filter_by(user_id=current_user.id).all()
+
+        total_duration_seconds = 0
+        for sess in all_sessions_for_total:
+            # 确保 start_time 和 end_time 存在且是 datetime.time 对象，并且 date 存在且是 datetime.date 对象
+            # 我们需要将 date 和 time 结合成 datetime 对象进行计算
+            if sess.start_time and sess.end_time and sess.date:
+                try:
+                    # 结合日期和时间
+                    start_dt = datetime.combine(sess.date, sess.start_time)
+                    end_dt = datetime.combine(sess.date, sess.end_time)
+
+                    session_duration = end_dt - start_dt
+
+                    # 处理跨午夜的情况 (如果 end_time 小于 start_time)
+                    if session_duration.total_seconds() < 0:
+                         session_duration += timedelta(days=1) # 加上一天的时间差
+
+                    total_duration_seconds += session_duration.total_seconds()
+                except Exception as e:
+                     # 打印或记录错误，以便调试
+                     print(f"Error calculating duration for session ID {sess.id}: {e}")
+                     # 可以选择跳过这个 session 或按需要处理错误
+
+        total_duration_minutes_query = total_duration_seconds // 60 # 将总秒数转换为总分钟数 (整数)
+
+        total_study_time_str = "0 minutes"
+        if total_duration_minutes_query is not None and total_duration_minutes_query > 0:
+            hours = int(total_duration_minutes_query // 60)
+            minutes = int(total_duration_minutes_query % 60)
+            if hours > 0:
+                total_study_time_str = f"{hours} hour(s) {minutes} minute(s)"
+            else:
+                total_study_time_str = f"{minutes} minute(s)"
+        elif total_duration_minutes_query == 0:
+             total_study_time_str = "0 minutes"
+        # 注意：如果 total_duration_minutes_query 为 None (scalar() 在没有记录时返回 None)，上面 if 已经处理了
+
+        # --- 2. 计算学习时间最长的那一天及其时长 ---
+        # 根据你的 StudySession 结构，通过迭代计算每天的总时长
+        daily_durations_calculated = {}
+        # 获取用户的所有 StudySession，按日期排序方便处理跨天 (尽管上面的跨天处理已覆盖)
+        all_sessions_for_longest = StudySession.query.filter_by(user_id=current_user.id).order_by(StudySession.date, StudySession.start_time).all()
+
+        for sess in all_sessions_for_longest:
+             if sess.start_time and sess.end_time and sess.date:
+                try:
+                    start_dt = datetime.combine(sess.date, sess.start_time)
+                    end_dt = datetime.combine(sess.date, sess.end_time)
+
+                    session_duration_calc = end_dt - start_dt
+
+                    if session_duration_calc.total_seconds() < 0: # 处理跨夜
+                        session_duration_calc += timedelta(days=1)
+
+                    # 将每天的总时长累加到字典中 (以分钟为单位)
+                    # date 作为字典的键
+                    daily_durations_calculated.setdefault(sess.date, 0)
+                    daily_durations_calculated[sess.date] += session_duration_calc.total_seconds() // 60
+                except Exception as e:
+                    print(f"Error calculating daily duration for session ID {sess.id}: {e}")
+                    # continue # 跳过这个 session
+
+        longest_study_day_info_str = "N/A"
+
+        if daily_durations_calculated:
+            # 找到总时长最长的那一天 (字典中值最大的键)
+            # 过滤掉总时长为0天的，除非所有天都是0
+            days_with_duration = {date: duration for date, duration in daily_durations_calculated.items() if duration > 0}
+
+            if not days_with_duration and daily_durations_calculated: # 如果有记录但时长都是0
+                 # 可以特殊处理或保持 N/A
+                 pass # 保持 N/A
+            elif days_with_duration:
+                longest_day_date = max(days_with_duration, key=days_with_duration.get)
+                longest_duration_minutes = days_with_duration[longest_day_date]
+
+                hours = int(longest_duration_minutes // 60)
+                minutes = int(longest_duration_minutes % 60)
+
+                longest_study_day_info_str = f"{longest_day_date.strftime('%Y-%m-%d')} ({hours} hour(s) {minutes} minute(s))"
+
+
+        # --- 创建分享记录 ---
+        # 检查是否已经分享过完全相同的内容给同一个人，避免重复（可选）
+        # 注意：如果统计数据变化了，即使给同一个人，也会创建新的分享记录
+        existing_share = DirectShare.query.filter_by(
+            sharer_id=current_user.id,
+            recipient_id=recipient.id,
+            shared_total_study_time=total_study_time_str,
+            shared_longest_study_day_info=longest_study_day_info_str
+        ).first()
+
+        if existing_share:
+            flash(f'You have already shared these exact stats with {recipient.username}. No new share created.', 'info')
+            return redirect(url_for('main.share'))
+
+        # 创建新的分享记录
+        new_share = DirectShare(
+            sharer_id=current_user.id,
+            recipient_id=recipient.id,
+            shared_total_study_time=total_study_time_str,
+            shared_longest_study_day_info=longest_study_day_info_str
+            # shared_at is handled by default=datetime.utcnow in the model
+        )
+        db.session.add(new_share)
+        db.session.commit()
+
+        flash(f'Successfully shared your study stats with {recipient.username}!', 'success')
+        return redirect(url_for('main.share'))
+
+    # --- 下面是 GET 请求的逻辑 (当用户访问 /share 页面时) ---
+
+    # 获取所有其他用户，用于在下拉列表中选择分享对象
+    all_other_users = User.query.filter(User.id != current_user.id).order_by(User.username).all()
+
+    # 获取分享给当前用户的记录
+    # 使用 DirectShare 模型，并通过 join 获取分享者的用户名
+    received_direct_shares = db.session.query(
+        DirectShare.shared_total_study_time,
+        DirectShare.shared_longest_study_day_info,
+        DirectShare.shared_at,
+        User.username.label('sharer_username') # 获取分享者的用户名
+    ).join(User, DirectShare.sharer_id == User.id)\
+     .filter(DirectShare.recipient_id == current_user.id)\
+     .order_by(DirectShare.shared_at.desc()).all()
+
+    # 旧的 report 相关逻辑可以暂时注释掉或移除，以简化页面
+    # my_reports = Report.query.filter_by(owner_id=current_user.id).order_by(Report.created_at.desc()).all()
+    my_reports = [] # 传递空列表，因为我们暂时不关注旧的 report
+
+    # shared_reports = [] # 这个变量我们不再以旧的方式使用
+    access_error = request.args.get('access_error') # 如果不再使用 access_code，这个也可以考虑移除
+
     return render_template(
         'share.html',
+        title="Share Study Data",
         my_reports=my_reports,
-        shared_reports=shared_reports,
-        access_error=access_error
+        # shared_reports=shared_reports, # 不再需要，因为我们用 received_direct_shares
+        access_error=access_error,
+        all_other_users_for_sharing=all_other_users, # 新增：传递用户列表给模板
+        received_direct_shares=received_direct_shares # 新增：传递直接分享的列表给模板
     )
 
-@main.route('/create_report', methods=['GET', 'POST'])
-@login_required
-def create_report():
-    """
-    Create a new study data report to share with others.
-    
-    This function:
-    1. Displays the report creation form
-    2. Processes form submission
-    3. Creates a new report with a unique access code
-    4. Creates SharedWith entries for selected users
-    5. Redirects to the share page on success
-    """
-    form = ReportForm(user=current_user)
-    
-    if form.validate_on_submit():
-        try:
-            print("Form validated successfully!")
-            print(f"Form data: Title: {form.title.data}, Date From: {form.date_from.data}, Date To: {form.date_to.data}")
-            
-            # Generate a unique access code (using first 8 chars of a UUID)
-            access_code = str(uuid.uuid4())[:8]
-            
-            # Set default expiration date if not provided
-            expires_at = form.expiry_date.data
-            if not expires_at:
-                expires_at = datetime.now() + timedelta(days=365)  # Default to 1 year
-            
-            # Create new report
-            new_report = Report(
-                title=form.title.data,
-                description=form.description.data,
-                start_date=form.date_from.data,  
-                end_date=form.date_to.data,      
-                subjects=','.join(form.subjects.data) if form.subjects.data else '',
-                permission_level=form.permission_level.data,
-                expires_at=expires_at,           
-                access_code=access_code,
-                owner_id=current_user.id
-            )
-            
-            db.session.add(new_report)
-            db.session.flush()  # Get the report ID
-            
-            # Add SharedWith entries for selected users
-            if form.share_with_users.data:
-                for user_id in form.share_with_users.data:
-                    shared_with = SharedWith(
-                        report_id=new_report.id,
-                        user_id=user_id,
-                        permission_level=form.permission_level.data
-                    )
-                    db.session.add(shared_with)
-            
-            # Handle email sharing (optional)
-            if form.share_with.data:
-                # Look up user by email
-                email = form.share_with.data.strip()
-                user = User.query.filter_by(email=email).first()
-                if user and user.id != current_user.id and user.id not in form.share_with_users.data:
-                    shared_with = SharedWith(
-                        report_id=new_report.id,
-                        user_id=user.id,
-                        permission_level=form.permission_level.data
-                    )
-                    db.session.add(shared_with)
-            
-            db.session.commit()
-            
-            flash('Report created successfully! Share the access code: ' + access_code, 'success')
-            return redirect(url_for('main.share'))
-            
-        except Exception as e:
-            db.session.rollback()
-            print(f"Error creating report: {str(e)}")  
-            flash(f'Error creating report: {str(e)}', 'danger')
-    else:
-        if request.method == 'POST':
-            print("Form validation failed")
-            print(form.errors)  
-    
-    return render_template('create_report.html', title='Create Report', form=form, editing=False)
 
 @main.route('/edit_report/<int:report_id>', methods=['GET', 'POST'])
 @login_required
@@ -376,7 +425,7 @@ def edit_report(report_id):
             form.subjects.data = report.subjects.split(',')
             
         # Pre-select shared users
-        current_shares = SharedWith.query.filter_by(report_id=report.id).all()
+        current_shares = DirectShare.query.filter_by(report_id=report.id).all()
         form.share_with_users.data = [share.user_id for share in current_shares]
     
     if form.validate_on_submit():
@@ -392,12 +441,12 @@ def edit_report(report_id):
             
             # Update sharing permissions
             # Remove all existing shares and add new ones
-            SharedWith.query.filter_by(report_id=report.id).delete()
+            DirectShare.query.filter_by(report_id=report.id).delete()
             
             # Add new shares from form
             if form.share_with_users.data:
                 for user_id in form.share_with_users.data:
-                    shared_with = SharedWith(
+                    shared_with = DirectShare(
                         report_id=report.id,
                         user_id=user_id,
                         permission_level=form.permission_level.data
@@ -410,7 +459,7 @@ def edit_report(report_id):
                 email = form.share_with.data.strip()
                 user = User.query.filter_by(email=email).first()
                 if user and user.id != current_user.id and user.id not in form.share_with_users.data:
-                    shared_with = SharedWith(
+                    shared_with = DirectShare(
                         report_id=report.id,
                         user_id=user.id,
                         permission_level=form.permission_level.data
@@ -453,7 +502,7 @@ def delete_report(report_id):
         return redirect(url_for('main.share'))
     
     try:
-        # Delete the report (cascade will handle removing SharedWith entries)
+        # Delete the report (cascade will handle removing DirectShare entries)
         db.session.delete(report)
         db.session.commit()
         
@@ -516,7 +565,7 @@ def view_report(access_code):
     # Check permission - user must be the owner or have the report shared with them
     if current_user.is_authenticated:
         has_permission = (current_user.id == report.owner_id) or \
-                         (SharedWith.query.filter_by(report_id=report.id, user_id=current_user.id).first() is not None)
+                         (DirectShare.query.filter_by(report_id=report.id, user_id=current_user.id).first() is not None)
         
         # If user doesn't have permission and is logged in, deny access
         if not has_permission:
@@ -617,7 +666,7 @@ def view_report(access_code):
         if current_user.id == report.owner_id:
             can_comment = True
         else:
-            shared = SharedWith.query.filter_by(report_id=report.id, user_id=current_user.id).first()
+            shared = DirectShare.query.filter_by(report_id=report.id, user_id=current_user.id).first()
             if shared and shared.permission_level == 'comment':
                 can_comment = True
     
