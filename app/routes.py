@@ -245,33 +245,33 @@ def share():
             flash('You cannot share stats with yourself.', 'warning')
             return redirect(url_for('main.share'))
 
-        # --- 1. 计算分享者的总学习时间 (以分钟为单位) ---
-        # 根据你的 StudySession 结构，使用 start_time 和 end_time 计算总时长
+        # -- 1. Calculate the total learning time of the sharer (in minutes) --
+        # According to your StudySession structure, calculate the total duration using start_time and end_time
         all_sessions_for_total = StudySession.query.filter_by(user_id=current_user.id).all()
 
         total_duration_seconds = 0
         for sess in all_sessions_for_total:
-            # 确保 start_time 和 end_time 存在且是 datetime.time 对象，并且 date 存在且是 datetime.date 对象
-            # 我们需要将 date 和 time 结合成 datetime 对象进行计算
+            # Ensure that start_time and end_time exist and are datetime.time objects, and date exists and is a datetime.date object
+            # We need to combine date and time into datetime objects for calculation
             if sess.start_time and sess.end_time and sess.date:
                 try:
-                    # 结合日期和时间
+                    # Combine date and time
                     start_dt = datetime.combine(sess.date, sess.start_time)
                     end_dt = datetime.combine(sess.date, sess.end_time)
 
                     session_duration = end_dt - start_dt
 
-                    # 处理跨午夜的情况 (如果 end_time 小于 start_time)
+                    # Handle overnight sessions (if end_time is less than start_time)
                     if session_duration.total_seconds() < 0:
-                         session_duration += timedelta(days=1) # 加上一天的时间差
+                         session_duration += timedelta(days=1) # Add one day time difference
 
                     total_duration_seconds += session_duration.total_seconds()
                 except Exception as e:
-                     # 打印或记录错误，以便调试
+                     # Print or log errors for debugging
                      print(f"Error calculating duration for session ID {sess.id}: {e}")
-                     # 可以选择跳过这个 session 或按需要处理错误
+                     # Can choose to skip this session or handle the error as needed
 
-        total_duration_minutes_query = total_duration_seconds // 60 # 将总秒数转换为总分钟数 (整数)
+        total_duration_minutes_query = total_duration_seconds // 60 # Convert total seconds to total minutes (integer)
 
         total_study_time_str = "0 minutes"
         if total_duration_minutes_query is not None and total_duration_minutes_query > 0:
@@ -283,12 +283,12 @@ def share():
                 total_study_time_str = f"{minutes} minute(s)"
         elif total_duration_minutes_query == 0:
              total_study_time_str = "0 minutes"
-        # 注意：如果 total_duration_minutes_query 为 None (scalar() 在没有记录时返回 None)，上面 if 已经处理了
+        # Note: If total_duration_minutes_query is None (scalar() returns None when there are no records), the above if already handles it
 
-        # --- 2. 计算学习时间最长的那一天及其时长 ---
-        # 根据你的 StudySession 结构，通过迭代计算每天的总时长
+        # --- 2. Calculate the longest study day and its duration ---
+        # Based on your StudySession structure, calculate the total daily duration through iteration
         daily_durations_calculated = {}
-        # 获取用户的所有 StudySession，按日期排序方便处理跨天 (尽管上面的跨天处理已覆盖)
+        # Get all user's StudySessions, sorted by date for easier handling of overnight sessions (although the overnight handling above already covers this)
         all_sessions_for_longest = StudySession.query.filter_by(user_id=current_user.id).order_by(StudySession.date, StudySession.start_time).all()
 
         for sess in all_sessions_for_longest:
@@ -299,27 +299,27 @@ def share():
 
                     session_duration_calc = end_dt - start_dt
 
-                    if session_duration_calc.total_seconds() < 0: # 处理跨夜
+                    if session_duration_calc.total_seconds() < 0: # Handle overnight sessions
                         session_duration_calc += timedelta(days=1)
 
-                    # 将每天的总时长累加到字典中 (以分钟为单位)
-                    # date 作为字典的键
+                    # Accumulate each day's total duration in the dictionary (in minutes)
+                    # Use date as the dictionary key
                     daily_durations_calculated.setdefault(sess.date, 0)
                     daily_durations_calculated[sess.date] += session_duration_calc.total_seconds() // 60
                 except Exception as e:
                     print(f"Error calculating daily duration for session ID {sess.id}: {e}")
-                    # continue # 跳过这个 session
+                    # continue # Skip this session
 
         longest_study_day_info_str = "N/A"
 
         if daily_durations_calculated:
-            # 找到总时长最长的那一天 (字典中值最大的键)
-            # 过滤掉总时长为0天的，除非所有天都是0
+            # Find the day with the longest total duration (the key with maximum value in the dictionary)
+            # Filter out days with zero duration, unless all days have zero duration
             days_with_duration = {date: duration for date, duration in daily_durations_calculated.items() if duration > 0}
 
-            if not days_with_duration and daily_durations_calculated: # 如果有记录但时长都是0
-                 # 可以特殊处理或保持 N/A
-                 pass # 保持 N/A
+            if not days_with_duration and daily_durations_calculated: # If there are records but all durations are 0
+                 # Can handle specially or keep as N/A
+                 pass # Keep as N/A
             elif days_with_duration:
                 longest_day_date = max(days_with_duration, key=days_with_duration.get)
                 longest_duration_minutes = days_with_duration[longest_day_date]
@@ -330,9 +330,9 @@ def share():
                 longest_study_day_info_str = f"{longest_day_date.strftime('%Y-%m-%d')} ({hours} hour(s) {minutes} minute(s))"
 
 
-        # --- 创建分享记录 ---
-        # 检查是否已经分享过完全相同的内容给同一个人，避免重复（可选）
-        # 注意：如果统计数据变化了，即使给同一个人，也会创建新的分享记录
+        # --- Create share record ---
+        # Check if exactly the same content has already been shared with this person, to avoid duplicates (optional)
+        # Note: If statistics change, a new share record will be created even for the same person
         existing_share = DirectShare.query.filter_by(
             sharer_id=current_user.id,
             recipient_id=recipient.id,
@@ -344,7 +344,7 @@ def share():
             flash(f'You have already shared these exact stats with {recipient.username}. No new share created.', 'info')
             return redirect(url_for('main.share'))
 
-        # 创建新的分享记录
+        # Create new share record
         new_share = DirectShare(
             sharer_id=current_user.id,
             recipient_id=recipient.id,
@@ -358,37 +358,37 @@ def share():
         flash(f'Successfully shared your study stats with {recipient.username}!', 'success')
         return redirect(url_for('main.share'))
 
-    # --- 下面是 GET 请求的逻辑 (当用户访问 /share 页面时) ---
+    # --- Below is the GET request logic (when user visits /share page) ---
 
-    # 获取所有其他用户，用于在下拉列表中选择分享对象
+    # Get all other users for selection in the dropdown sharing menu
     all_other_users = User.query.filter(User.id != current_user.id).order_by(User.username).all()
 
-    # 获取分享给当前用户的记录
-    # 使用 DirectShare 模型，并通过 join 获取分享者的用户名
+    # Get records shared with the current user
+    # Use DirectShare model and get the sharer's username through join
     received_direct_shares = db.session.query(
         DirectShare.shared_total_study_time,
         DirectShare.shared_longest_study_day_info,
         DirectShare.shared_at,
-        User.username.label('sharer_username') # 获取分享者的用户名
+        User.username.label('sharer_username') # Get the sharer's username
     ).join(User, DirectShare.sharer_id == User.id)\
      .filter(DirectShare.recipient_id == current_user.id)\
      .order_by(DirectShare.shared_at.desc()).all()
 
-    # 旧的 report 相关逻辑可以暂时注释掉或移除，以简化页面
+    # Old report-related logic can be temporarily commented out or removed to simplify the page
     # my_reports = Report.query.filter_by(owner_id=current_user.id).order_by(Report.created_at.desc()).all()
-    my_reports = [] # 传递空列表，因为我们暂时不关注旧的 report
+    my_reports = [] # Pass an empty list because we're not currently focused on old reports
 
-    # shared_reports = [] # 这个变量我们不再以旧的方式使用
-    access_error = request.args.get('access_error') # 如果不再使用 access_code，这个也可以考虑移除
+    # shared_reports = [] # This variable is no longer used in the old way
+    access_error = request.args.get('access_error') # If access_code is no longer used, this can also be considered for removal
 
     return render_template(
         'share.html',
         title="Share Study Data",
         my_reports=my_reports,
-        # shared_reports=shared_reports, # 不再需要，因为我们用 received_direct_shares
+        # shared_reports=shared_reports, # No longer needed because we use received_direct_shares
         access_error=access_error,
-        all_other_users_for_sharing=all_other_users, # 新增：传递用户列表给模板
-        received_direct_shares=received_direct_shares # 新增：传递直接分享的列表给模板
+        all_other_users_for_sharing=all_other_users, # New: Pass user list to template
+        received_direct_shares=received_direct_shares # New: Pass direct shares list to template
     )
 
 
@@ -745,28 +745,28 @@ def analytics_data():
     try:
         data = request.json or {}
         
-        # 直接使用用户传入的日期参数，不检查默认值
+        # Use parameters passed by user directly, don't check default values
         date_from_str = data.get('dateFrom')
         date_to_str = data.get('dateTo')
         
-        # 转换日期字符串为日期对象
+        # Convert date strings to date objects
         date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
         date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
         
-        # 查询此用户在指定日期范围内的学习会话
-        # 保留用户ID过滤，确保数据安全
+        # Query this user's study sessions within the specified date range
+        # Keep user ID filtering to ensure data security
         sessions = StudySession.query.filter(
             StudySession.user_id == current_user.id,
             StudySession.date >= date_from,
             StudySession.date <= date_to
         ).all()
         
-        # 只处理会话数据，不计算统计信息
+        # Process session data only, don't calculate statistics
         sessions_data = []
         for session in sessions:
-            # 计算会话时长
+            # Calculate session duration
             duration = datetime.combine(session.date, session.end_time) - datetime.combine(session.date, session.start_time)
-            if duration.total_seconds() < 0:  # 处理跨夜会话
+            if duration.total_seconds() < 0:  # Handle overnight sessions
                 duration += timedelta(days=1)
             
             minutes = int(duration.total_seconds() // 60)
@@ -787,7 +787,7 @@ def analytics_data():
                 'hour_of_day': session.start_time.hour
             })
         
-        # 只返回会话数据，不返回summary
+        # Return session data only, don't return summary
         return jsonify({
             'sessions': sessions_data
         })
