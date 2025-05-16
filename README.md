@@ -86,7 +86,7 @@ Open your web browser and navigate to: http://localhost:5000
 
 7. There are already accounts available for testing
 | ID | Email address | Password |
-|----------|------|-----------------|
+|-------|------------|----------|
 | dbw623811 | 1258507337@qq.com | Qtdy623811233@ |
 | example | daibowen975@gmail.com | Qtdy623811233@ |
 | aswecan | 11223344@example.com | Qtdy623811233@ |
