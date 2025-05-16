@@ -40,7 +40,7 @@ function initCurrentPage() {
  */
 function initHomePage() {
 
-  // 移除原先的表单处理代码，因为我们现在使用Flask表单提交
+  // Remove original form handling code because we now use Flask form submission
   // const loginForm = document.getElementById("loginForm");
   // if (loginForm) {
   //   loginForm.addEventListener("submit", function (e) {
@@ -48,7 +48,7 @@ function initHomePage() {
   //   });
   // }
   
-  // 其他主页初始化代码...
+  // Other home page initialization code...
 }
 
 /**
@@ -57,14 +57,14 @@ function initHomePage() {
 function initUploadPage() {
   console.log("Upload page initialized");
 
-  // 定义全局计时器变量（改为局部变量，不影响外部定义的相同变量）
+  // Define global timer variables (changed to local variables, not affecting external variables with the same name)
   let timerInterval = null;
   let seconds = 0;
-  let efficiency = 5;  // 默认效率为5（最高）
+  let efficiency = 5;  // Default efficiency is 5 (highest)
   let timerRunning = false;
   let timerPaused = false;
 
-  // 获取DOM元素
+  // Get DOM elements
   const startBtn = document.getElementById('startTimer');
   const pauseBtn = document.getElementById('pauseTimer');
   const resetBtn = document.getElementById('resetTimer');
@@ -76,14 +76,14 @@ function initUploadPage() {
   if (startBtn && pauseBtn && resetBtn && saveBtn) {
     console.log("Timer controls found, adding event listeners");
 
-    // 开始计时按钮
+    // Start timer button
     startBtn.addEventListener('click', function() {
       if (!timerRunning) {
         startTimer();
       }
     });
 
-    // 暂停按钮
+    // Pause button
     pauseBtn.addEventListener('click', function() {
       if (timerRunning) {
         pauseTimer();
@@ -92,21 +92,21 @@ function initUploadPage() {
       }
     });
 
-    // 重置按钮
+    // Reset button
     resetBtn.addEventListener('click', function() {
       resetTimer();
     });
 
-    // 保存会话按钮
+    // Save session button
     saveBtn.addEventListener('click', function() {
       saveStudySession();
     });
     
-    // 添加效率星级评分事件监听
+    // Add efficiency star rating event listeners
     if (efficiencyStars) {
       const ratingOptions = document.querySelectorAll('.rating-option');
       
-      // 为每个评分选项添加事件监听
+      // Add event listeners for each rating option
       if (ratingOptions.length > 0) {
         ratingOptions.forEach(option => {
           const star = option.querySelector('.efficiency-star');
@@ -127,7 +127,7 @@ function initUploadPage() {
           }
         });
       } else {
-        // 如果没有找到评分选项容器，则使用星星元素
+        // If no rating option container found, use the star elements directly
         efficiencyStars.forEach(star => {
           star.addEventListener('click', function() {
             const value = parseInt(this.getAttribute('data-value'));
@@ -149,12 +149,12 @@ function initUploadPage() {
     console.warn("Timer controls not found on this page");
   }
 
-  // 补零函数
+  // Zero padding function
   function padNumber(num) {
     return String(num).padStart(2, '0');
   }
   
-  // 开始计时
+  // Start timer
   function startTimer() {
     console.log("Starting timer");
     timerRunning = true;
@@ -168,14 +168,14 @@ function initUploadPage() {
     if (resetBtn) resetBtn.disabled = false;
     if (saveBtn) saveBtn.disabled = false;
     
-    // 隐藏效率评分（只有在暂停或保存前才显示）
+    // Hide efficiency rating (only shown before pause or save)
     if (efficiencyRating) efficiencyRating.style.display = 'none';
 
-    // 开始计时
+    // Start the timer
     timerInterval = setInterval(updateTimer, 1000);
   }
 
-  // 暂停计时
+  // Pause timer
   function pauseTimer() {
     console.log("Pausing timer");
     timerRunning = false;
@@ -185,16 +185,16 @@ function initUploadPage() {
       pauseBtn.innerHTML = '<i class="fas fa-play me-2"></i>Resume';
     }
     
-    // 显示效率评分
+    // Show efficiency rating
     if (efficiencyRating) efficiencyRating.style.display = 'block';
     
-    // 突出显示当前效率评分
+    // Highlight current efficiency rating
     highlightStars(efficiency);
 
     clearInterval(timerInterval);
   }
 
-  // 恢复计时
+  // Resume timer
   function resumeTimer() {
     console.log("Resuming timer");
     timerRunning = true;
@@ -204,25 +204,25 @@ function initUploadPage() {
       pauseBtn.innerHTML = '<i class="fas fa-pause me-2"></i>Pause';
     }
     
-    // 隐藏效率评分
+    // Hide efficiency rating
     if (efficiencyRating) efficiencyRating.style.display = 'none';
 
-    // 继续计时
+    // Continue timer
     timerInterval = setInterval(updateTimer, 1000);
   }
 
-  // 重置计时器
+  // Reset timer
   function resetTimer() {
     console.log("Resetting timer");
     timerRunning = false;
     timerPaused = false;
     seconds = 0;
-    efficiency = 5;  // 重置效率为默认值
+    efficiency = 5;  // Reset efficiency to default value
 
-    // 清除计时器
+    // Clear timer
     clearInterval(timerInterval);
 
-    // 重置UI元素
+    // Reset UI elements
     if (timerDisplay) timerDisplay.textContent = "00:00:00";
     if (startBtn) startBtn.disabled = false;
     if (pauseBtn) {
@@ -232,14 +232,14 @@ function initUploadPage() {
     if (resetBtn) resetBtn.disabled = true;
     if (saveBtn) saveBtn.disabled = true;
     
-    // 隐藏效率评分
+    // Hide efficiency rating
     if (efficiencyRating) efficiencyRating.style.display = 'none';
     
-    // 重置星星显示
+    // Reset star display
     highlightStars(0);
   }
 
-  // 更新计时器显示
+  // Update timer display
   function updateTimer() {
     seconds++;
     const hours = Math.floor(seconds / 3600);
@@ -251,20 +251,20 @@ function initUploadPage() {
     }
   }
   
-  // 设置效率评分
+  // Set efficiency rating
   function setEfficiencyRating(value) {
     console.log(`Setting efficiency rating to ${value}`);
     efficiency = value;
     highlightStars(value);
     
-    // 显示通知信息
+    // Show notification
     const ratingLabels = ["", "Poor", "Below Average", "Average", "Good", "Excellent"];
     if (value >= 1 && value <= 5) {
       showNotification('Efficiency Rating', `Set to: ${ratingLabels[value]}`, 'info');
     }
   }
   
-  // 高亮星星
+  // Highlight stars
   function highlightStars(count) {
     if (efficiencyStars) {
       const ratingOptions = document.querySelectorAll('.rating-option');
@@ -289,7 +289,7 @@ function initUploadPage() {
             if (label) label.style.color = '#6c757d';
           }
           
-          // 为当前选中的评分添加特殊样式
+          // Add special styling for current selected rating
           if (starValue === count) {
             option.style.transform = 'scale(1.05)';
             option.style.backgroundColor = 'rgba(255, 152, 0, 0.1)';
@@ -302,9 +302,9 @@ function initUploadPage() {
     }
   }
 
-  // 保存学习会话
+  // Save study session
   function saveStudySession() {
-    // 防止重复提交
+    // Prevent duplicate submissions
     if (saveBtn.disabled) {
       console.log("Already saving, ignoring duplicate submit");
       return;
@@ -314,7 +314,7 @@ function initUploadPage() {
     const locationInput = document.getElementById('location');
     const timerDisplay = document.getElementById('timerDisplay');
 
-    // 表单验证
+    // Form validation
     if (!subjectSelect || !locationInput) {
       console.error("Required form elements not found");
       showNotification('Error', 'Form elements not found', 'danger');
@@ -331,20 +331,20 @@ function initUploadPage() {
       return;
     }
 
-    // 检查是否有计时数据
+    // Check if timer data exists
     if (seconds <= 0) {
       showNotification('Error', 'You need to study for at least a few seconds', 'danger');
       return;
     }
 
-    // 计算学习时长
+    // Calculate study duration
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const duration = `${hours}h ${minutes}m`;
 
     console.log(`Saving session: ${subjectSelect.value} at ${locationInput.value} for ${duration} with efficiency ${efficiency}`);
 
-    // 准备数据对象
+    // Prepare data object
     const data = {
       subject_id: subjectSelect.value,
       location: locationInput.value,
@@ -353,14 +353,14 @@ function initUploadPage() {
       notes: document.querySelector('textarea')?.value || ""
     };
 
-    // 获取CSRF令牌
+    // Get CSRF token
     const csrfToken = document.querySelector('input[name="csrf_token"]').value;
 
-    // 显示加载状态
+    // Show loading state
     saveBtn.disabled = true;
     saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Saving...';
 
-    // 发送AJAX请求
+    // Send AJAX request
     fetch('/upload', {
       method: 'POST',
       headers: {
@@ -378,17 +378,17 @@ function initUploadPage() {
     .then(data => {
       console.log('Success:', data);
       
-      // 恢复按钮状态
+      // Restore button state
       saveBtn.disabled = false;
       saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>Save Session';
       
-      // 显示成功通知
+      // Show success notification
       showNotification('Success', 'Study session saved successfully!', 'success');
       
-      // 重置计时器
+      // Reset timer
       resetTimer();
       
-      // 添加动画效果
+      // Add animation effect
       const timerContainer = document.querySelector('.timer-container');
       if (timerContainer) {
         timerContainer.classList.add('border', 'border-success');
@@ -397,7 +397,7 @@ function initUploadPage() {
         }, 1500);
       }
       
-      // 重新加载页面以显示新记录
+      // Reload page to display new record
       setTimeout(() => {
         window.location.reload();
       }, 1500);
@@ -405,19 +405,19 @@ function initUploadPage() {
     .catch(error => {
       console.error('Error:', error);
       
-      // 恢复按钮状态
+      // Restore button state
       saveBtn.disabled = false;
       saveBtn.innerHTML = '<i class="fas fa-save me-2"></i>Save Session';
       
-      // 显示错误通知
+      // Show error notification
       showNotification('Error', `Failed to save study session: ${error.message}`, 'danger');
     });
   }
 }
 
-// 显示通知消息
+// Show notification message
 function showNotification(title, message, type = 'info') {
-  // 检查是否已存在通知容器，没有则创建
+  // Check if notification container already exists, if not create it
   let toastContainer = document.querySelector('.toast-container');
   if (!toastContainer) {
     toastContainer = document.createElement('div');
@@ -425,25 +425,25 @@ function showNotification(title, message, type = 'info') {
     document.body.appendChild(toastContainer);
   }
   
-  // 创建通知元素
+  // Create notification element
   const toastId = `toast-${Date.now()}`;
   const toastEl = document.createElement('div');
   toastEl.className = `toast show border-0`;
   toastEl.id = toastId;
   
-  // 设置背景颜色
+  // Set background color
   let bgColor = 'bg-info';
   if (type === 'success') bgColor = 'bg-success';
   if (type === 'danger') bgColor = 'bg-danger';
   if (type === 'warning') bgColor = 'bg-warning';
   
-  // 设置图标
+  // Set icon
   let icon = 'info-circle';
   if (type === 'success') icon = 'check-circle';
   if (type === 'danger') icon = 'exclamation-circle';
   if (type === 'warning') icon = 'exclamation-triangle';
   
-  // 创建通知内容
+  // Create notification content
   toastEl.innerHTML = `
     <div class="toast-header ${bgColor} text-white">
       <i class="fas fa-${icon} me-2"></i>
@@ -455,10 +455,10 @@ function showNotification(title, message, type = 'info') {
     </div>
   `;
   
-  // 添加到通知容器
+  // Add to notification container
   toastContainer.appendChild(toastEl);
   
-  // 注册关闭事件
+  // Register close event
   const closeBtn = toastEl.querySelector('.btn-close');
   if (closeBtn) {
     closeBtn.addEventListener('click', () => {
@@ -466,7 +466,7 @@ function showNotification(title, message, type = 'info') {
     });
   }
   
-  // 自动关闭（3秒后）
+  // Auto-close (after 3 seconds)
   setTimeout(() => {
     if (toastEl.parentNode) {
       toastEl.remove();
@@ -474,9 +474,9 @@ function showNotification(title, message, type = 'info') {
   }, 3000);
 }
 
-// 添加通知样式
+// Add notification styles
 function addNotificationStyles() {
-  // 添加通知的样式
+  // Add notification styles
   const styleEl = document.createElement('style');
   styleEl.innerHTML = `
     .toast-container {
@@ -492,10 +492,10 @@ function addNotificationStyles() {
   document.head.appendChild(styleEl);
 }
 
-// 页面加载时添加通知样式
+// Add notification styles when page loads
 document.addEventListener('DOMContentLoaded', function() {
   addNotificationStyles();
-  // 其他初始化代码...
+  // Other initialization code...
 });
 
 
@@ -506,7 +506,7 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 function initVisualizePage() {
   
-  // 设置默认日期范围（过去30天）
+  // Set default date range (last 30 days)
   const today = new Date();
   const oneMonthAgo = new Date();
   oneMonthAgo.setDate(today.getDate() - 30);
@@ -516,43 +516,43 @@ function initVisualizePage() {
   const filterApplyBtn = document.getElementById("filterApply");
   
   if (dateFromInput && dateToInput) {
-    // 设置默认日期
+    // Set default dates
     dateFromInput.value = oneMonthAgo.toISOString().split("T")[0];
     dateToInput.value = today.toISOString().split("T")[0];
     
-    // 页面加载时自动获取初始数据
+    // Automatically fetch initial data when page loads
     fetchAndUpdateAnalytics(dateFromInput.value, dateToInput.value);
   }
   
-  // 应用筛选按钮事件监听
+  // Apply filter button event listener
   if (filterApplyBtn) {
     filterApplyBtn.addEventListener("click", function() {
       const dateFrom = dateFromInput.value;
       const dateTo = dateToInput.value;
       
-      // 添加加载状态
+      // Add loading state
       /*
       document.querySelectorAll(".chart-placeholder").forEach(el => {
         el.innerHTML = '<div class="d-flex justify-content-center align-items-center h-100"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
       }); */
       
-      // 获取并更新数据
+      // Fetch and update data
       fetchAndUpdateAnalytics(dateFrom, dateTo);
     });
   }
   
-  // AI推荐按钮事件监听
+  // AI recommendation button event listener
   const aiRecommendBtn = document.getElementById("getAiRecommendations");
   if (aiRecommendBtn) {
-    // 先移除所有现有的点击事件处理程序，防止重复绑定
+    // First remove all existing click event handlers to prevent duplicate bindings
     aiRecommendBtn.replaceWith(aiRecommendBtn.cloneNode(true));
     
-    // 重新获取按钮（因为cloneNode会删除所有事件监听器）
+    // Get the button again (because cloneNode removes all event listeners)
     const newAiRecommendBtn = document.getElementById("getAiRecommendations");
     
-    // 添加新的事件处理程序
+    // Add new event handler
     newAiRecommendBtn.addEventListener("click", async function() {
-      // 获取当前筛选条件
+      // Get current filter conditions
       const dateFrom = dateFromInput.value;
       const dateTo = dateToInput.value;
       
@@ -562,11 +562,11 @@ function initVisualizePage() {
       }
       
       try {
-        // 显示加载指示器
+        // Show loading indicator
         document.getElementById("aiRecommendationsContent").classList.add("d-none");
         document.getElementById("aiLoadingIndicator").classList.remove("d-none");
         
-        // 获取数据并生成AI推荐
+        // Get data and generate AI recommendations
         const sessions = window.filteredSessionsForAI || [];
         if (!sessions || sessions.length === 0) {
           document.getElementById("aiLoadingIndicator").classList.add("d-none");
@@ -581,14 +581,14 @@ function initVisualizePage() {
           return;
         }
         
-        // 获取AI推荐结果
+        // Get AI recommendation results
         const result = await getAIRecommendations(sessions);
         
-        // 隐藏加载指示器
+        // Hide loading indicator
         document.getElementById("aiLoadingIndicator").classList.add("d-none");
         document.getElementById("aiRecommendationsContent").classList.remove("d-none");
         
-        // 显示推荐结果
+        // Show recommendation results
         if (result.success === false) {
           document.getElementById("aiRecommendationsContent").innerHTML = `
             <div class="alert alert-warning">
@@ -597,7 +597,7 @@ function initVisualizePage() {
             </div>
           `;
         } else {
-          // 使用打字效果显示推荐内容
+          // Use typewriter effect to display recommendations
           displayAIRecommendations(result.recommendations);
         }
       } catch (error) {
@@ -614,7 +614,7 @@ function initVisualizePage() {
     });
   }
   
-  // 数据导出功能
+  // Data export functionality
   const exportDataBtn = document.querySelector('.btn-outline-primary');
   if (exportDataBtn) {
     exportDataBtn.addEventListener('click', function() {
@@ -623,15 +623,15 @@ function initVisualizePage() {
   }
 }
 
-// 获取CSRF令牌
+// Get CSRF token
 function getCSRFToken() {
   const tokenElement = document.querySelector('input[name="csrf_token"]');
   return tokenElement ? tokenElement.value : '';
 }
 
-// 获取数据并更新所有图表
+// Fetch data and update all charts
 function fetchAndUpdateAnalytics(dateFrom, dateTo) {
-  // 1. 显示通用加载状态 (作用于所有 .chart-placeholder)
+  // 1. Show generic loading state (applied to all .chart-placeholder)
  /* document.querySelectorAll(".chart-placeholder").forEach(el => {
     el.innerHTML = `
       <div class="d-flex justify-content-center align-items-center h-100">
@@ -645,7 +645,7 @@ function fetchAndUpdateAnalytics(dateFrom, dateTo) {
     `;
   });*/
   
-  // (获取 totalStudyTimeEl 等元素的代码可以保留，如果将来 main.js 需要直接操作它们)
+  // (Code for getting totalStudyTimeEl and other elements can be retained if main.js needs to operate on them directly in the future)
   // const totalStudyTimeEl = document.getElementById("totalStudyTime");
   // ...
 
@@ -653,7 +653,7 @@ function fetchAndUpdateAnalytics(dateFrom, dateTo) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-CSRFToken': getCSRFToken() // 确保 getCSRFToken 已定义
+      'X-CSRFToken': getCSRFToken() // Make sure getCSRFToken is defined
     },
     body: JSON.stringify({ dateFrom, dateTo })
   })
@@ -665,33 +665,33 @@ function fetchAndUpdateAnalytics(dateFrom, dateTo) {
     console.log('API response data:', data);
     
     if (data.sessions && data.sessions.length > 0) {
-      // 数据有效，直接调用更新函数
+      // Valid data, directly call update functions
       updateStatsCards(data.sessions);
-      updateStudyBarChart(data.sessions); // 直接调用
-      updateSubjectPieChart(data.sessions); // 如果实现，也直接调用
+      updateStudyBarChart(data.sessions); // Direct call
+      updateSubjectPieChart(data.sessions); // If implemented, also direct call
       updateEfficiencyTimeChart(data.sessions);
       updateLocationEfficiencyChart(data.sessions);
       updateTimeLocation3DChart(data.sessions);
-      window.filteredSessionsForAI = data.sessions; // 将数据存储在全局变量中，以便后续AI推荐使用
-      // ... 其他图表函数
+      window.filteredSessionsForAI = data.sessions; // Store data in global variable for later AI recommendation use
+      // ... Other chart functions
       
       if (typeof updateDataTable === 'function') {
         updateDataTable(data.sessions);
       }
     } else {
-      // 无数据情况
-      updateStatsCards([]); // 更新统计卡片为无数据状态 ("--")
-      updateStudyBarChart([]); // 更新条形图为无数据状态 (charts.js中应处理此情况)
+      // No data case
+      updateStatsCards([]); // Update stat cards to no-data state ("--")
+      updateStudyBarChart([]); // Update bar chart to no-data state (charts.js should handle this case)
       updateSubjectPieChart([]);
       updateEfficiencyTimeChart([]);
       updateLocationEfficiencyChart([]);
       updateTimeLocation3DChart([]);
       // ...
 
-      // 对于没有被特定图表更新函数处理的 .chart-placeholder，可以设置通用无数据提示
+      // For .chart-placeholder elements not handled by specific chart update functions, we can set generic no-data message
       
       /*document.querySelectorAll(".chart-placeholder").forEach(el => {
-        // 不再检查特定ID
+        // No longer checking specific ID
         el.innerHTML = `...`;
       }); */
       if (typeof updateDataTable === 'function') {
@@ -702,8 +702,8 @@ function fetchAndUpdateAnalytics(dateFrom, dateTo) {
   .catch(error => {
     console.error('Error fetching analytics data:', error);
     
-    updateStatsCards([]); // 更新统计卡片为错误状态 ("--")
-    updateStudyBarChart([]); // 更新条形图为错误状态
+    updateStatsCards([]); // Update stat cards to error state ("--")
+    updateStudyBarChart([]); // Update bar chart to error state
     // updateSubjectPieChart([]);
     // ...
 
@@ -725,10 +725,10 @@ function initSharePage() {
 }
 
 // =================================================================
-// 图表相关函数
+// Chart-related Functions
 // =================================================================
 
-// 处理日期格式化
+// Process date formatting
 function formatDate(dateString) {
   const date = new Date(dateString);
   return date.toLocaleDateString('en-US', {
@@ -737,36 +737,36 @@ function formatDate(dateString) {
   });
 }
 
-// 更新AI推荐内容
+// Update AI recommendations
 function updateAIRecommendations(recommendations) {
   const container = document.getElementById('aiRecommendationsContent');
   
-  // 完全重置容器内容和状态
+  // Completely reset container content and state
   container.scrollTop = 0;
   container.innerHTML = '';
   
-  // 如果没有推荐，显示提示信息
+  // If no recommendations, display info message
   if (!recommendations || recommendations.length === 0) {
     container.innerHTML = `
       <div class="text-center py-4">
         <i class="fas fa-info-circle fa-3x text-secondary mb-3"></i>
-        <p class="text-muted">没有足够的数据生成推荐。</p>
-        <small class="text-muted">多学习一段时间后再来查看！</small>
+        <p class="text-muted">Not enough data to generate recommendations.</p>
+        <small class="text-muted">Come back after studying for a while!</small>
       </div>
     `;
     return;
   }
   
-  // 创建一个包含所有内容的容器
+  // Create a container for all content
   const mainContent = document.createElement('div');
   
-  // 添加固定标题用于说明内容
+  // Add fixed title to explain the content
   const titleElem = document.createElement('div');
   titleElem.className = 'mb-3';
-  titleElem.innerHTML = `<p>基于您的学习数据，以下是一些个性化推荐：</p>`;
+  titleElem.innerHTML = `<p>Based on your study data, here are some personalized recommendations:</p>`;
   mainContent.appendChild(titleElem);
   
-  // 构建推荐卡片
+  // Build recommendation cards
   recommendations.forEach((rec, index) => {
     const cardEl = document.createElement('div');
     cardEl.className = 'mb-3';
@@ -788,24 +788,24 @@ function updateAIRecommendations(recommendations) {
     mainContent.appendChild(cardEl);
   });
   
-  // 添加内容到容器
+  // Add content to container
   container.appendChild(mainContent);
   
-  // 确保容器滚动到顶部
+  // Make sure container scrolls to top
   setTimeout(() => {
     container.scrollTop = 0;
   }, 10);
 }
 
-// 更新数据表格
+// Update data table
 function updateDataTable(sessions) {
   const dataTableContainer = document.querySelector('.data-table-container');
   if (!dataTableContainer) return;
   
-  // 按日期逆序排序
+  // Sort sessions by date in reverse order
   const sortedSessions = [...sessions].sort((a, b) => new Date(b.date) - new Date(a.date));
   
-  // 生成表格HTML
+  // Generate table HTML
   let tableHtml = `
     <div class="table-responsive">
       <table class="table table-striped table-hover">
@@ -823,7 +823,7 @@ function updateDataTable(sessions) {
   `;
   
   sortedSessions.forEach(session => {
-    // 星级HTML
+    // Star rating HTML
     let starsHtml = '';
     for (let i = 1; i <= 5; i++) {
       if (i <= session.efficiency) {
@@ -854,7 +854,7 @@ function updateDataTable(sessions) {
   dataTableContainer.innerHTML = tableHtml;
 }
 
-// 导出学习数据
+// Export study data
 function exportStudyData() {
   const dateFrom = document.getElementById("dateFrom").value;
   const dateTo = document.getElementById("dateTo").value;
@@ -874,7 +874,7 @@ function exportStudyData() {
       return;
     }
     
-    // 准备CSV数据
+    // Prepare CSV data
     let csvContent = "data:text/csv;charset=utf-8,";
     csvContent += "Date,Subject,Start Time,End Time,Duration,Location,Efficiency,Notes\n";
     
@@ -882,17 +882,17 @@ function exportStudyData() {
       csvContent += `${session.date},${session.subject},${session.start_time},${session.end_time},${session.duration},"${session.location}",${session.efficiency},"${session.notes || ''}"\n`;
     });
     
-    // 创建下载链接
+    // Create download link
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
     link.setAttribute("download", `study_data_${dateFrom}_to_${dateTo}.csv`);
     document.body.appendChild(link);
     
-    // 触发下载
+    // Trigger download
     link.click();
     
-    // 清理DOM
+    // Clean up DOM
     document.body.removeChild(link);
     
     showNotification('Export Success', 'Your study data has been exported to CSV', 'success');
