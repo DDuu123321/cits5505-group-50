@@ -64,7 +64,7 @@ pip install -r requirements.txt
 
 4. Set up the database
 ```bash
-# Initialize database migrations (if migrations folder doesn't exist)
+# Initialize database migrations (if migrations folder doesn't exist, A test database has already been included)
 flask db init
 
 # Create migration files
@@ -83,6 +83,15 @@ flask run
 
 6. Access the application
 Open your web browser and navigate to: http://localhost:5000
+
+7. There are already accounts available for testing
+| ID | Email address | Password |
+|----------|------|-----------------|
+| dbw623811 | 1258507337@qq.com | Qtdy623811233@ |
+| example | daibowen975@gmail.com | Qtdy623811233@ |
+| aswecan | 11223344@example.com | Qtdy623811233@ |
+| 12345678@example.com | 12345678@example.com | Aa123456|
+
 
 ## 🧪 Running Tests
 
